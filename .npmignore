@@ -1,0 +1,6 @@
+src/
+example/
+*.config.ts
+tsconfig.json
+.storybook/
+node_modules/

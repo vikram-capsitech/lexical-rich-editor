@@ -1,0 +1,70 @@
+/* CharacterStylesPopupPlugin.css (RTP FIX: works inside Fluent UI Panel/Layer) */
+
+.lexical-floating-ui-host {
+  position: fixed;
+  inset: 0;
+  pointer-events: none; /* host never blocks clicks */
+  z-index: 10000000; /* above panel/layer */
+}
+
+/* popup is interactive */
+.lexical-floating-ui-host .character-style-popup {
+  pointer-events: auto;
+}
+
+.character-style-popup {
+  position: fixed; /* IMPORTANT: positioning uses viewport rects */
+  z-index: 10000010;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  /* padding: 6px; */
+  border-radius: 4px;
+
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.14),
+    0 2px 10px rgba(0, 0, 0, 0.08);
+
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  transform-origin: top left;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+
+  visibility: hidden;
+  pointer-events: none;
+
+  user-select: none;
+}
+
+.character-style-popup.is-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.character-style-popup .divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: rgba(0, 0, 0, 0.08);
+  flex: 0 0 auto;
+}
+
+.character-style-popup :where(button):focus-visible {
+  outline: 2px solid rgba(0, 120, 212, 0.75);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+.character-style-popup :where(button):disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

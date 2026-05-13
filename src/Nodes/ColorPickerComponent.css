@@ -1,0 +1,127 @@
+.aoColorBtnV8 {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.aoColorCallout {
+  border-radius: 12px;
+}
+
+.aoLexRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.aoLexSwatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid #d0d0d0;
+}
+
+.aoLexTitle {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.aoLexLabel {
+  width: 42px;
+  font-size: 12px;
+  color: #666;
+  padding-top: 8px;
+}
+
+.aoLexSwatches {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 6px;
+}
+
+.aoLexSwatchBtn {
+  width: 22px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid #d0d0d0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.aoLexSV {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: crosshair;
+  border: 1px solid #e0e0e0;
+}
+
+.aoLexSVHue {
+  position: absolute;
+  inset: 0;
+}
+
+.aoLexSVWhite {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, #fff, rgba(255, 255, 255, 0));
+}
+
+.aoLexSVBlack {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #000, rgba(0, 0, 0, 0));
+}
+
+.aoLexSVThumb {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transform: translate(-6px, -6px);
+}
+
+.aoLexHue {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid #e0e0e0;
+  background: linear-gradient(
+    to right,
+    #ff0000,
+    #ffff00,
+    #00ff00,
+    #00ffff,
+    #0000ff,
+    #ff00ff,
+    #ff0000
+  );
+}
+
+.aoLexHueThumb {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  transform: translate(-6px, -6px);
+}
+
+.aoLexPreview {
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid #e0e0e0;
+}
+
+.aoLexActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

@@ -1,0 +1,12 @@
+.TableCellResizer__resizer {
+  position: absolute;
+  z-index: 99999;
+  pointer-events: auto;
+}
+
+.TableCellResizer__ui {
+  width: 10px;
+  height: 10px;
+  user-select: none;
+  cursor: col-resize;
+}

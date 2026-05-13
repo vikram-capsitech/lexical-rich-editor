@@ -1,0 +1,362 @@
+.underline {
+  text-decoration: underline;
+}
+
+.strikethrough {
+  text-decoration: line-through;
+}
+
+.underlineStrikethrough {
+  text-decoration: underline line-through;
+}
+
+.italic {
+  font-style: italic;
+}
+.capitalize {
+  text-transform: capitalize;
+}
+.lowercase {
+  text-transform: lowercase;
+}
+.uppercase {
+  text-transform: uppercase;
+}
+.code {
+  color: black;
+  padding: 2px;
+  background: #eee;
+  border: 1px solid #ccc;
+}
+
+.table {
+  margin-top: 4px;
+}
+.quote {
+  margin: 0;
+  margin-top: 6px;
+  margin-left: 20px;
+  margin-bottom: 10px;
+  font-size: 15px;
+  color: rgb(101, 103, 107);
+  border-left-color: rgb(206, 208, 212);
+  border-left-width: 4px;
+  border-left-style: solid;
+  padding-left: 16px;
+}
+.tableCell {
+  width: 70px;
+  border: 1px solid #bbb;
+  padding-left: 6px;
+}
+
+.tableCell p {
+  margin-bottom: 4px;
+}
+
+.tableCellHeader {
+  background: #f2f3f5;
+}
+
+span.editor-image {
+  cursor: default;
+  display: inline-block;
+  position: relative;
+  user-select: none;
+}
+
+.editor-image img {
+  max-width: 100%;
+  cursor: default;
+}
+
+.editor-image img.focused {
+  outline: 2px solid rgb(60, 132, 244);
+  user-select: none;
+}
+
+.editor-image img.focused.draggable {
+  cursor: grab;
+}
+
+.editor-image img.focused.draggable:active {
+  cursor: grabbing;
+}
+
+.editor-image .image-caption-container .tree-view-output {
+  margin: 0;
+  border-radius: 0;
+}
+
+.editor-image .image-caption-container {
+  display: block;
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  padding: 0;
+  margin: 0;
+  border-top: 1px solid #fff;
+  background-color: rgba(255, 255, 255, 0.9);
+  min-width: 100px;
+  color: #000;
+  overflow: hidden;
+}
+
+.editor-image .image-caption-button {
+  display: block;
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  width: 30%;
+  padding: 10px;
+  margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  background-color: rgba(0, 0, 0, 0.5);
+  min-width: 100px;
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+
+.editor-image .image-caption-button:hover {
+  background-color: rgba(60, 132, 244, 0.5);
+}
+
+.editor-image .image-edit-button {
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+  /* background-image: url(/src/images/icons/pencil-fill.svg); */
+  background-size: 16px;
+  background-position: center;
+  background-repeat: no-repeat;
+  width: 35px;
+  height: 35px;
+  vertical-align: -0.25em;
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.editor-image .image-edit-button:hover {
+  background-color: rgba(60, 132, 244, 0.1);
+}
+
+.editor-image .image-resizer {
+  display: block;
+  width: 7px;
+  height: 7px;
+  position: absolute;
+  background-color: rgb(60, 132, 244);
+  border: 1px solid #fff;
+}
+
+.editor-image .image-resizer.image-resizer-n {
+  top: -6px;
+  left: 48%;
+  cursor: n-resize;
+}
+
+.editor-image .image-resizer.image-resizer-ne {
+  top: -6px;
+  right: -6px;
+  cursor: ne-resize;
+}
+
+.editor-image .image-resizer.image-resizer-e {
+  bottom: 48%;
+  right: -6px;
+  cursor: e-resize;
+}
+
+.editor-image .image-resizer.image-resizer-se {
+  bottom: -2px;
+  right: -6px;
+  cursor: nwse-resize;
+}
+
+.editor-image .image-resizer.image-resizer-s {
+  bottom: -2px;
+  left: 48%;
+  cursor: s-resize;
+}
+
+.editor-image .image-resizer.image-resizer-sw {
+  bottom: -2px;
+  left: -6px;
+  cursor: sw-resize;
+}
+
+.editor-image .image-resizer.image-resizer-w {
+  bottom: 48%;
+  left: -6px;
+  cursor: w-resize;
+}
+
+.editor-image .image-resizer.image-resizer-nw {
+  top: -6px;
+  left: -6px;
+  cursor: nw-resize;
+}
+.inline-editor-image img {
+  max-width: 100%;
+  cursor: default;
+}
+
+.inline-editor-image img.focused {
+  outline: 2px solid rgb(60, 132, 244);
+}
+
+.inline-editor-image img.focused.draggable {
+  cursor: grab;
+}
+
+.inline-editor-image img.focused.draggable:active {
+  cursor: grabbing;
+}
+
+.inline-editor-image .image-caption-container .tree-view-output {
+  margin: 0;
+  border-radius: 0;
+}
+
+.inline-editor-image.position-full {
+  margin: 1em 0 1em 0;
+}
+
+.inline-editor-image.position-left {
+  float: left;
+  width: 50%;
+  margin: 1em 1em 0 0;
+}
+
+.inline-editor-image.position-right {
+  float: right;
+  width: 50%;
+  margin: 1em 0 0 1em;
+}
+
+.inline-editor-image .image-edit-button {
+  display: block;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 8px;
+  margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  background-color: rgba(0, 0, 0, 0.5);
+  min-width: 60px;
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+
+.inline-editor-image .image-edit-button:hover {
+  background-color: rgba(60, 132, 244, 0.5);
+}
+
+.inline-editor-image .image-caption-container {
+  display: block;
+  background-color: #f4f4f4;
+  min-width: 100%;
+  color: #000;
+  overflow: hidden;
+}
+
+.lexical-table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin: 12px 0;
+  overflow: hidden;
+}
+
+.lexical-table-row {
+}
+
+.lexical-table-cell,
+.lexical-table-cell-header {
+  border: 1px solid #c8c8c8;
+  padding: 10px;
+  min-width: 90px;
+  vertical-align: top;
+  position: relative;
+  background: #ffffff;
+}
+
+.lexical-table-cell-header {
+  background: #f5f5f5;
+  font-weight: 600;
+}
+
+/* --- SELECTION STATES (Playground-ish) --- */
+.lexical-table-cell-selected {
+  background: rgba(33, 111, 219, 0.12);
+}
+
+.lexical-table-cell-primary-selected {
+  outline: 2px solid rgba(33, 111, 219, 0.9);
+  outline-offset: -2px;
+}
+
+.lexical-table-cell-editing {
+  box-shadow: inset 0 0 0 2px rgba(33, 111, 219, 0.6);
+}
+
+/* --- RESIZER HANDLE (TableCellResizerPlugin uses this) --- */
+.lexical-table-cell-resizer {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+}
+
+.lexical-table-cell-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 2px;
+  width: 2px;
+  height: 100%;
+  background: rgba(33, 111, 219, 0.55);
+  opacity: 0;
+  transition: opacity 120ms ease-in-out;
+}
+
+.lexical-table-cell:hover .lexical-table-cell-resizer::after,
+.lexical-table-cell-header:hover .lexical-table-cell-resizer::after {
+  opacity: 1;
+}
+
+/* scope to your wrapper class if possible */
+.editor {
+  line-height: 1.25;
+}
+
+/* emails/signatures rely on tight paragraphs */
+.editor p {
+  margin: 0;
+  line-height: 1.25;
+}
+
+/* pasted signatures often contain divs */
+.editor div {
+  margin: 0;
+}
+
+/* avoid baseline gaps */
+.editor img {
+  vertical-align: middle;
+}
+
+.TableCellResizer__ui {
+  position: absolute;
+  z-index: 50;
+}

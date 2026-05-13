@@ -1,0 +1,98 @@
+.editorCode {
+  background-color: var(--colorNeutralBackground3, rgb(240, 242, 245));
+  font-family: Menlo, Consolas, Monaco, monospace;
+  display: block;
+  padding: 8px 8px 8px 52px;
+  line-height: 1.53;
+  font-size: 13px;
+  margin: 0;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  tab-size: 2;
+  overflow-x: auto;
+  position: relative;
+}
+
+.editorCode:before {
+  content: attr(data-gutter);
+  position: absolute;
+  background-color: var(--colorNeutralBackground2, #eee);
+  left: 0;
+  top: 0;
+  border-right: 1px solid var(--colorNeutralStroke1, #ccc);
+  padding: 8px;
+  color: var(--colorNeutralForeground3, #777);
+  /* white-space: pre-wrap; */
+  text-align: right;
+  min-width: 25px;
+}
+.editorCode:after {
+  content: attr(data-highlight-language);
+  position: absolute;
+  top: 0;
+  right: 3px;
+  padding: 3px;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--colorNeutralForeground3, rgba(0, 0, 0, 0.5));
+}
+
+.editorTokenComment {
+  color: var(--colorNeutralForeground3, slategray);
+}
+
+.editor-tokenPunctuation {
+  color: var(--colorNeutralForeground3, #999);
+}
+
+.editorTokenProperty {
+  color: var(--colorBrandForeground1, #905);
+}
+
+.editorTokenSelector {
+  color: var(--colorNeutralForeground2, #690);
+}
+
+.editorTokenOperator {
+  color: var(--colorNeutralForeground2, #9a6e3a);
+}
+
+.editorTokenAttr {
+  color: var(--colorBrandForegroundLink, #07a);
+}
+
+.editorTokenVariable {
+  color: var(--colorNeutralForeground2, #e90);
+}
+
+.editorTokenFunction {
+  color: var(--colorBrandForeground1, #dd4a68);
+}
+
+.editor {
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.editor p {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.editor div {
+  margin: 0;
+}
+
+.editor img {
+  display: block;
+}
+
+.editor-image {
+  position: relative;
+  display: inline-block;
+}
+
+.editor-image img {
+  display: block;
+  max-width: 100%;
+}

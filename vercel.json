@@ -1,0 +1,6 @@
+{
+  "buildCommand": "yarn workspace lexical-rich-editor-example build",
+  "outputDirectory": "example/dist",
+  "installCommand": "yarn install",
+  "framework": null
+}

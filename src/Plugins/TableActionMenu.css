@@ -1,0 +1,45 @@
+.aoTableActionHandleRoot {
+  pointer-events: auto;
+}
+
+.aoTableActionHandleBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--colorNeutralStroke2);
+  background: var(--colorNeutralBackground1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  /* box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12); */
+}
+
+.aoTableActionHandleBtn:hover {
+  background: var(--colorNeutralBackground1Hover);
+}
+
+.aoTableActionPopover {
+  min-width: 280px;
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+}
+
+.aoMenuRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.aoMenuLabel {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.aoMenuShortcut {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.7;
+}

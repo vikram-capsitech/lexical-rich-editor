@@ -1,0 +1,92 @@
+{
+  "name": "@tarviks/lexical-rich-editor",
+  "version": "1.0.1",
+  "description": "A feature-rich Lexical-based rich text editor with autocomplete, spell check, tables, images, and more.",
+  "keywords": [
+    "lexical",
+    "rich-text",
+    "editor",
+    "react",
+    "wysiwyg",
+    "fluent-ui"
+  ],
+  "author": {
+    "name": "Capsitech",
+    "email": "contact@capsitech.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/capsitech/lexical-rich-editor",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/capsitech/lexical-rich-editor.git"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dist/index.css": "./dist/index.css"
+  },
+  "workspaces": [
+    "example"
+  ],
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "dev": "cd example && yarn dev",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "yarn build"
+  },
+  "peerDependencies": {
+    "@fluentui/react": ">=8.0.0",
+    "@fluentui/react-components": ">=9.0.0",
+    "@fluentui/react-icons": ">=2.0.0",
+    "@lexical/code": ">=0.44.0",
+    "@lexical/link": ">=0.44.0",
+    "@lexical/list": ">=0.44.0",
+    "@lexical/react": ">=0.44.0",
+    "@lexical/rich-text": ">=0.44.0",
+    "@lexical/table": ">=0.44.0",
+    "@lexical/utils": ">=0.44.0",
+    "lexical": ">=0.44.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@fluentui/react": "^8.125.5",
+    "@fluentui/react-components": "^9.73.8",
+    "@fluentui/react-icons": "^2.0.295",
+    "@lexical/code": "^0.44.0",
+    "@lexical/html": "^0.44.0",
+    "@lexical/link": "^0.44.0",
+    "@lexical/list": "^0.44.0",
+    "@lexical/react": "^0.44.0",
+    "@lexical/rich-text": "^0.44.0",
+    "@lexical/selection": "^0.44.0",
+    "@lexical/table": "^0.44.0",
+    "@lexical/utils": "^0.44.0",
+    "@types/react": "^18.3.7",
+    "@types/react-dom": "^18.3.0",
+    "lexical": "^0.44.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.8.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
