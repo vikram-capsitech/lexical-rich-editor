@@ -15,6 +15,7 @@
     "email": "contact@capsitech.com"
   },
   "license": "MIT",
+  "private":"true",
   "homepage": "https://github.com/capsitech/lexical-rich-editor",
   "repository": {
     "type": "git",
