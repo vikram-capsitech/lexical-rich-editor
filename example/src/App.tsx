@@ -217,7 +217,7 @@ function MyEditor() {
                style={{ color: '#94a3b8', fontSize: 12, textDecoration: 'none', fontWeight: 600 }}>
               npm
             </a>
-            <a href="https://github.com/capsitech/lexical-rich-editor" target="_blank" rel="noreferrer"
+            <a href="https://github.com/vikram-capsitech/lexical-rich-editor" target="_blank" rel="noreferrer"
                style={{ color: '#94a3b8', fontSize: 12, textDecoration: 'none', fontWeight: 600 }}>
               GitHub
             </a>
@@ -538,7 +538,7 @@ function MyEditor() {
         <footer style={{ textAlign: 'center', padding: '48px 0 8px', color: '#94a3b8', fontSize: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 10 }}>
             <a href="https://www.npmjs.com/package/@tarviks/lexical-rich-editor" target="_blank" rel="noreferrer" style={{ color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>npm</a>
-            <a href="https://github.com/capsitech/lexical-rich-editor" target="_blank" rel="noreferrer" style={{ color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>GitHub</a>
+            <a href="https://github.com/vikram-capsitech/lexical-rich-editor" target="_blank" rel="noreferrer" style={{ color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>GitHub</a>
             <a href="https://lexical.dev" target="_blank" rel="noreferrer" style={{ color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>Lexical</a>
           </div>
           @tarviks/lexical-rich-editor · MIT License · Built with Lexical + Fluent UI
