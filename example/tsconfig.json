@@ -16,9 +16,9 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
-    "paths": {
-      "lexical-rich-editor": ["../src/index.ts"]
-    }
+    "paths": {
+      "lexical-rich-editor": ["../src/index.ts"]
+    }
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
