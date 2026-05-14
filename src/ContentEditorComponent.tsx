@@ -17,6 +17,7 @@ import { TablePlugin } from '@lexical/react/LexicalTablePlugin';
 import { HeadingNode, QuoteNode } from '@lexical/rich-text';
 import { TableCellNode, TableNode, TableRowNode } from '@lexical/table';
 import React, { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
+import { $setSelection } from 'lexical';
 
 import {
   ContentEditorLevel,
@@ -111,6 +112,10 @@ function FocusEventsPlugin({
       const next = e.relatedTarget as Node | null;
       const stillInside = !!next && root.contains(next);
       if (stillInside) return;
+
+      editor.update(() => {
+        $setSelection(null);
+      });
 
       setFocused(false);
       onBlur?.();
@@ -304,7 +309,7 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
     const initialConfig: any = {
       namespace: props.namespace,
       theme,
-      onError: () => {},
+      onError: () => { },
       nodes: [
         HeadingNode,
         QuoteNode,
@@ -408,9 +413,8 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
               width: props.width ?? '100%',
               height: props.height ?? '100%',
               margin: props.margin ?? '5px auto',
-              border: `1px solid ${
-                isOverLimit ? '#c4272c' : 'var(--colorNeutralStroke1, #ccced1)'
-              }`,
+              border: `1px solid ${isOverLimit ? '#c4272c' : 'var(--colorNeutralStroke1, #ccced1)'
+                }`,
               transition: 'border-color 0.2s',
               display: 'flex',
               flexDirection: 'column',
@@ -543,7 +547,10 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
             )}
 
             {!isReadOnly && props.showFloatingToolbar && <CharacterStylesPopupPlugin />}
-            <CustomOnChangePlugin value={props.value} onChange={props.onChange} />
+            <CustomOnChangePlugin
+              value={props.value}
+              onChange={props.onChange}
+            />
 
             {props.wordLimit !== undefined && <WordCountPlugin onCountChange={handleWordCount} />}
 
