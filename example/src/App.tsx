@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { ContentEditorComponent, ContentEditorLevel, ContentEditorRef } from 'lexical-rich-editor';
+import { ContentEditorComponent, ContentEditorLevel, ContentEditorRef } from '@tarviks/lexical-rich-editor';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabKey = 'pro' | 'standard' | 'basic' | 'none' | 'readonly';

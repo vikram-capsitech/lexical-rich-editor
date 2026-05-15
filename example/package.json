@@ -21,8 +21,8 @@
     "@lexical/selection": "^0.44.0",
     "@lexical/table": "^0.44.0",
     "@lexical/utils": "^0.44.0",
+    "@tarviks/lexical-rich-editor": "workspace:*",
     "lexical": "^0.44.0",
-    "lexical-rich-editor": "file:..",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
