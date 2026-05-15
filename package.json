@@ -1,6 +1,6 @@
 {
   "name": "@tarviks/lexical-rich-editor",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "A feature-rich Lexical-based rich text editor with autocomplete, spell check, tables, images, and more.",
   "keywords": [
     "lexical",
@@ -11,15 +11,14 @@
     "fluent-ui"
   ],
   "author": {
-    "name": "Capsitech",
-    "email": "contact@capsitech.com"
+    "name": "LazyDevelopers",
+    "email": "lazydevelopers.team@gmail.com"
   },
   "license": "MIT",
-  "private":"true",
-  "homepage": "https://github.com/capsitech/lexical-rich-editor",
+  "homepage": "lexical-rich-editor-example.vercel.app",
   "repository": {
     "type": "git",
-    "url": "https://github.com/capsitech/lexical-rich-editor.git"
+    "url": "git+https://github.com/vikram-capsitech/lexical-rich-editor.git"
   },
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -89,5 +88,6 @@
   },
   "engines": {
     "node": ">=20.0.0"
-  }
+  },
+  "packageManager": "yarn@4.12.0"
 }

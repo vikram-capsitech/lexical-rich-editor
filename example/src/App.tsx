@@ -7,18 +7,18 @@ type OutputTab = 'source' | 'preview';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const TABS: { key: TabKey; label: string; description: string; color: string }[] = [
-  { key: 'pro',      label: 'Pro',       color: '#7c3aed', description: 'Full toolbar — images, YouTube embeds, tables, code blocks, fonts, colors, alignment & more' },
-  { key: 'standard', label: 'Standard',  color: '#2563eb', description: 'Everyday formatting: headings, bold/italic, lists, links & tables' },
-  { key: 'basic',    label: 'Basic',     color: '#0891b2', description: 'Minimal set: bold, italic, underline, ordered & unordered lists, links' },
-  { key: 'none',     label: 'Minimal',   color: '#059669', description: 'No toolbar — clean editable area, great for inline editors' },
+  { key: 'pro', label: 'Pro', color: '#7c3aed', description: 'Full toolbar — images, YouTube embeds, tables, code blocks, fonts, colors, alignment & more' },
+  { key: 'standard', label: 'Standard', color: '#2563eb', description: 'Everyday formatting: headings, bold/italic, lists, links & tables' },
+  { key: 'basic', label: 'Basic', color: '#0891b2', description: 'Minimal set: bold, italic, underline, ordered & unordered lists, links' },
+  { key: 'none', label: 'Minimal', color: '#059669', description: 'No toolbar — clean editable area, great for inline editors' },
   { key: 'readonly', label: 'Read-only', color: '#9ca3af', description: 'Non-interactive preview mode, perfect for rendering saved content' },
 ];
 
 const LEVEL_MAP: Record<TabKey, ContentEditorLevel> = {
-  pro:      ContentEditorLevel.Pro,
+  pro: ContentEditorLevel.Pro,
   standard: ContentEditorLevel.Standard,
-  basic:    ContentEditorLevel.Basic,
-  none:     ContentEditorLevel.None,
+  basic: ContentEditorLevel.Basic,
+  none: ContentEditorLevel.None,
   readonly: ContentEditorLevel.Pro,
 };
 
@@ -39,58 +39,58 @@ const INITIAL_HTML = `
 `.trim();
 
 const PROPS_REFERENCE = [
-  { prop: 'namespace',           type: 'string',                     required: true,  desc: 'Unique editor ID. Used as the Lexical namespace.' },
-  { prop: 'value',               type: 'string',                     required: true,  desc: 'Controlled HTML content.' },
-  { prop: 'onChange',            type: '(html: string) => void',     required: true,  desc: 'Fires whenever content changes.' },
-  { prop: 'level',               type: 'ContentEditorLevel',         required: false, desc: 'Toolbar preset: None | Basic | Standard | Pro. Default: Pro.' },
-  { prop: 'readOnly',            type: 'boolean',                    required: false, desc: 'Disables editing. Renders content as read-only.' },
-  { prop: 'placeholder',         type: 'string',                     required: false, desc: 'Placeholder text shown when editor is empty.' },
-  { prop: 'height',              type: 'string | number',            required: false, desc: 'Outer container height (e.g. "400px", "100%").' },
-  { prop: 'width',               type: 'string | number',            required: false, desc: 'Outer container width.' },
-  { prop: 'margin',              type: 'string',                     required: false, desc: 'CSS margin on the outer wrapper.' },
-  { prop: 'contentHeight',       type: 'string | number',            required: false, desc: 'Inner editable area height.' },
-  { prop: 'autoFocus',           type: 'boolean',                    required: false, desc: 'Focus the editor on mount.' },
-  { prop: 'showFloatingToolbar', type: 'boolean',                    required: false, desc: 'Show a floating format bar on text selection.' },
-  { prop: 'wordLimit',           type: 'number',                     required: false, desc: 'Maximum word count. Triggers onWordLimitExceeded.' },
-  { prop: 'suggestFn',           type: 'async (text, cursorIndex?) => Promise<string[] | { generated_text: string }>', required: false, desc: 'AI autocomplete provider. Return suggestions for ghost-text.' },
-  { prop: 'suggestIdleMs',       type: 'number',                     required: false, desc: 'Debounce delay before calling suggestFn (default 300ms).' },
-  { prop: 'spellCheckFn',        type: 'async (text) => Promise<SpellCheckPayload>', required: false, desc: 'Spell/grammar check provider. Return issues array.' },
-  { prop: 'spellCheckEnabled',   type: 'boolean',                    required: false, desc: 'Toggle spell check on/off (default true).' },
-  { prop: 'spellCheckIdleMs',    type: 'number',                     required: false, desc: 'Debounce delay before calling spellCheckFn (default 1200ms).' },
-  { prop: 'onFocus',             type: '() => void',                 required: false, desc: 'Fires when the editor gains focus.' },
-  { prop: 'onBlur',              type: '() => void',                 required: false, desc: 'Fires when the editor loses focus.' },
-  { prop: 'onSuggestionAccept',  type: '({ suggestionText, triggerText, method }) => void', required: false, desc: 'Fires when user accepts an AI suggestion.' },
-  { prop: 'onSuggestionShown',   type: '() => void',                 required: false, desc: 'Fires when a suggestion ghost text appears.' },
-  { prop: 'onSpellCheckAccept',  type: '({ original, replacement, message, type }) => void', required: false, desc: 'Fires when user accepts a spell/grammar correction.' },
+  { prop: 'namespace', type: 'string', required: true, desc: 'Unique editor ID. Used as the Lexical namespace.' },
+  { prop: 'value', type: 'string', required: true, desc: 'Controlled HTML content.' },
+  { prop: 'onChange', type: '(html: string) => void', required: true, desc: 'Fires whenever content changes.' },
+  { prop: 'level', type: 'ContentEditorLevel', required: false, desc: 'Toolbar preset: None | Basic | Standard | Pro. Default: Pro.' },
+  { prop: 'readOnly', type: 'boolean', required: false, desc: 'Disables editing. Renders content as read-only.' },
+  { prop: 'placeholder', type: 'string', required: false, desc: 'Placeholder text shown when editor is empty.' },
+  { prop: 'height', type: 'string | number', required: false, desc: 'Outer container height (e.g. "400px", "100%").' },
+  { prop: 'width', type: 'string | number', required: false, desc: 'Outer container width.' },
+  { prop: 'margin', type: 'string', required: false, desc: 'CSS margin on the outer wrapper.' },
+  { prop: 'contentHeight', type: 'string | number', required: false, desc: 'Inner editable area height.' },
+  { prop: 'autoFocus', type: 'boolean', required: false, desc: 'Focus the editor on mount.' },
+  { prop: 'showFloatingToolbar', type: 'boolean', required: false, desc: 'Show a floating format bar on text selection.' },
+  { prop: 'wordLimit', type: 'number', required: false, desc: 'Maximum word count. Triggers onWordLimitExceeded.' },
+  { prop: 'suggestFn', type: 'async (text, cursorIndex?) => Promise<string[] | { generated_text: string }>', required: false, desc: 'AI autocomplete provider. Return suggestions for ghost-text.' },
+  { prop: 'suggestIdleMs', type: 'number', required: false, desc: 'Debounce delay before calling suggestFn (default 300ms).' },
+  { prop: 'spellCheckFn', type: 'async (text) => Promise<SpellCheckPayload>', required: false, desc: 'Spell/grammar check provider. Return issues array.' },
+  { prop: 'spellCheckEnabled', type: 'boolean', required: false, desc: 'Toggle spell check on/off (default true).' },
+  { prop: 'spellCheckIdleMs', type: 'number', required: false, desc: 'Debounce delay before calling spellCheckFn (default 1200ms).' },
+  { prop: 'onFocus', type: '() => void', required: false, desc: 'Fires when the editor gains focus.' },
+  { prop: 'onBlur', type: '() => void', required: false, desc: 'Fires when the editor loses focus.' },
+  { prop: 'onSuggestionAccept', type: '({ suggestionText, triggerText, method }) => void', required: false, desc: 'Fires when user accepts an AI suggestion.' },
+  { prop: 'onSuggestionShown', type: '() => void', required: false, desc: 'Fires when a suggestion ghost text appears.' },
+  { prop: 'onSpellCheckAccept', type: '({ original, replacement, message, type }) => void', required: false, desc: 'Fires when user accepts a spell/grammar correction.' },
   { prop: 'onWordLimitExceeded', type: '({ wordCount, wordLimit, exceeded }) => void', required: false, desc: 'Fires when content crosses the word limit.' },
 ];
 
 const REF_API = [
-  { method: 'getValue()',             returns: 'string',        desc: 'Returns the current content as an HTML string.' },
-  { method: 'setValue(html)',         returns: 'void',          desc: 'Replaces editor content with the given HTML.' },
-  { method: 'clear()',                returns: 'void',          desc: 'Clears all content.' },
-  { method: 'focus()',                returns: 'void',          desc: 'Moves focus into the editor.' },
-  { method: 'blur()',                 returns: 'void',          desc: 'Removes focus from the editor.' },
-  { method: 'isEmpty()',              returns: 'boolean',       desc: 'Returns true when the editor has no meaningful content.' },
-  { method: 'isFocused()',            returns: 'boolean',       desc: 'Returns true when the editor is focused.' },
-  { method: 'upsertBlock(spec)',      returns: 'void',          desc: 'Insert or replace a named block by kind.' },
-  { method: 'removeBlock(kind)',      returns: 'void',          desc: 'Remove a named block from the content.' },
-  { method: 'hasBlock(kind)',         returns: 'boolean',       desc: 'Returns true if a block of the given kind exists.' },
-  { method: 'getEditor()',            returns: 'LexicalEditor', desc: 'Returns the raw Lexical editor instance.' },
+  { method: 'getValue()', returns: 'string', desc: 'Returns the current content as an HTML string.' },
+  { method: 'setValue(html)', returns: 'void', desc: 'Replaces editor content with the given HTML.' },
+  { method: 'clear()', returns: 'void', desc: 'Clears all content.' },
+  { method: 'focus()', returns: 'void', desc: 'Moves focus into the editor.' },
+  { method: 'blur()', returns: 'void', desc: 'Removes focus from the editor.' },
+  { method: 'isEmpty()', returns: 'boolean', desc: 'Returns true when the editor has no meaningful content.' },
+  { method: 'isFocused()', returns: 'boolean', desc: 'Returns true when the editor is focused.' },
+  { method: 'upsertBlock(spec)', returns: 'void', desc: 'Insert or replace a named block by kind.' },
+  { method: 'removeBlock(kind)', returns: 'void', desc: 'Remove a named block from the content.' },
+  { method: 'hasBlock(kind)', returns: 'boolean', desc: 'Returns true if a block of the given kind exists.' },
+  { method: 'getEditor()', returns: 'LexicalEditor', desc: 'Returns the raw Lexical editor instance.' },
 ];
 
 const FEATURES = [
-  { icon: '⚡', title: 'Lexical-powered',   color: '#7c3aed', desc: "Built on Meta's extensible Lexical framework — fast, reliable, and battle-tested." },
-  { icon: '🤖', title: 'AI Autocomplete',   color: '#2563eb', desc: 'Ghost-text inline suggestions with Tab/Enter to accept. Wire up any LLM API.' },
-  { icon: '✅', title: 'Spell & Grammar',   color: '#059669', desc: 'Real-time underlines (red=spelling, blue=grammar, yellow=style) with correction popovers.' },
-  { icon: '🎨', title: 'Rich Toolbar',      color: '#dc2626', desc: 'Headings, lists, tables, code blocks, links, fonts, colors, images and more.' },
-  { icon: '📊', title: 'Full Tables',       color: '#d97706', desc: 'Insert tables with cell merge, background color, and drag-to-resize columns.' },
-  { icon: '🖼️', title: 'Images & Media',   color: '#0891b2', desc: 'Block & inline images with resizing handles. YouTube video embeds.' },
-  { icon: '🔧', title: 'Imperative Ref',   color: '#7c3aed', desc: 'getValue, setValue, clear, focus, isEmpty, upsertBlock — full programmatic control.' },
-  { icon: '📐', title: 'Four Levels',       color: '#2563eb', desc: 'None / Basic / Standard / Pro toolbar levels. Pick the right UX for every context.' },
-  { icon: '🔢', title: 'Word Limit',        color: '#059669', desc: 'Set a word limit and receive a callback when the user exceeds it.' },
-  { icon: '🎯', title: 'TypeScript',        color: '#0891b2', desc: 'Fully typed with complete prop and ref interfaces. Ships with .d.ts files.' },
-  { icon: '🎪', title: 'Floating Toolbar',  color: '#dc2626', desc: 'Context-sensitive floating format bar appears on text selection.' },
+  { icon: '⚡', title: 'Lexical-powered', color: '#7c3aed', desc: "Built on Meta's extensible Lexical framework — fast, reliable, and battle-tested." },
+  { icon: '🤖', title: 'AI Autocomplete', color: '#2563eb', desc: 'Ghost-text inline suggestions with Tab/Enter to accept. Wire up any LLM API.' },
+  { icon: '✅', title: 'Spell & Grammar', color: '#059669', desc: 'Real-time underlines (red=spelling, blue=grammar, yellow=style) with correction popovers.' },
+  { icon: '🎨', title: 'Rich Toolbar', color: '#dc2626', desc: 'Headings, lists, tables, code blocks, links, fonts, colors, images and more.' },
+  { icon: '📊', title: 'Full Tables', color: '#d97706', desc: 'Insert tables with cell merge, background color, and drag-to-resize columns.' },
+  { icon: '🖼️', title: 'Images & Media', color: '#0891b2', desc: 'Block & inline images with resizing handles. YouTube video embeds.' },
+  { icon: '🔧', title: 'Imperative Ref', color: '#7c3aed', desc: 'getValue, setValue, clear, focus, isEmpty, upsertBlock — full programmatic control.' },
+  { icon: '📐', title: 'Four Levels', color: '#2563eb', desc: 'None / Basic / Standard / Pro toolbar levels. Pick the right UX for every context.' },
+  { icon: '🔢', title: 'Word Limit', color: '#059669', desc: 'Set a word limit and receive a callback when the user exceeds it.' },
+  { icon: '🎯', title: 'TypeScript', color: '#0891b2', desc: 'Fully typed with complete prop and ref interfaces. Ships with .d.ts files.' },
+  { icon: '🎪', title: 'Floating Toolbar', color: '#dc2626', desc: 'Context-sensitive floating format bar appears on text selection.' },
   { icon: '📦', title: 'Peer-dep friendly', color: '#d97706', desc: 'Lexical & Fluent UI are peer deps — no version conflicts in your app.' },
 ];
 
@@ -141,12 +141,12 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [activeTab, setActiveTab]       = useState<TabKey>('pro');
-  const [htmlValue, setHtmlValue]       = useState(INITIAL_HTML);
-  const [outputTab, setOutputTab]       = useState<OutputTab>('source');
-  const [showOutput, setShowOutput]     = useState(true);
-  const [showProps, setShowProps]       = useState(false);
-  const [showRefApi, setShowRefApi]     = useState(false);
+  const [activeTab, setActiveTab] = useState<TabKey>('pro');
+  const [htmlValue, setHtmlValue] = useState(INITIAL_HTML);
+  const [outputTab, setOutputTab] = useState<OutputTab>('source');
+  const [showOutput, setShowOutput] = useState(true);
+  const [showProps, setShowProps] = useState(false);
+  const [showRefApi, setShowRefApi] = useState(false);
   const editorRef = useRef<ContentEditorRef>(null);
   const { copied, copy } = useCopy();
 
@@ -154,10 +154,10 @@ export default function App() {
   const words = countWords(htmlValue);
   const chars = countChars(htmlValue);
 
-  const INSTALL_CMD   = 'yarn add @tarviks/lexical-rich-editor';
-  const INSTALL_NPM   = 'npm install @tarviks/lexical-rich-editor';
-  const PEER_CMD      = 'yarn add lexical @lexical/react @lexical/code @lexical/link @lexical/list @lexical/rich-text @lexical/table @lexical/utils @lexical/selection @lexical/html @fluentui/react @fluentui/react-components @fluentui/react-icons';
-  const QUICK_START   = `import { useRef, useState } from 'react';
+  const INSTALL_CMD = 'yarn add @tarviks/lexical-rich-editor';
+  const INSTALL_NPM = 'npm install @tarviks/lexical-rich-editor';
+  const PEER_CMD = 'yarn add lexical @lexical/react @lexical/code @lexical/link @lexical/list @lexical/rich-text @lexical/table @lexical/utils @lexical/selection @lexical/html @fluentui/react @fluentui/react-components @fluentui/react-icons';
+  const QUICK_START = `import { useRef, useState } from 'react';
 import {
   ContentEditorComponent,
   ContentEditorLevel,
@@ -214,15 +214,15 @@ function MyEditor() {
           </span>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             <a href="https://www.npmjs.com/package/@tarviks/lexical-rich-editor" target="_blank" rel="noreferrer"
-               style={{ color: '#94a3b8', fontSize: 12, textDecoration: 'none', fontWeight: 600 }}>
+              style={{ color: '#94a3b8', fontSize: 12, textDecoration: 'none', fontWeight: 600 }}>
               npm
             </a>
             <a href="https://github.com/vikram-capsitech/lexical-rich-editor" target="_blank" rel="noreferrer"
-               style={{ color: '#94a3b8', fontSize: 12, textDecoration: 'none', fontWeight: 600 }}>
+              style={{ color: '#94a3b8', fontSize: 12, textDecoration: 'none', fontWeight: 600 }}>
               GitHub
             </a>
             <span style={{ background: '#1e293b', color: '#94a3b8', fontSize: 11, padding: '3px 8px', borderRadius: 4, fontFamily: 'monospace' }}>
-              v1.0.1
+              v1.0.4
             </span>
           </div>
         </div>
@@ -262,7 +262,7 @@ function MyEditor() {
             <div style={{ padding: '14px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
                 { label: 'yarn', cmd: INSTALL_CMD, id: 'yarn-install' },
-                { label: 'npm',  cmd: INSTALL_NPM, id: 'npm-install' },
+                { label: 'npm', cmd: INSTALL_NPM, id: 'npm-install' },
               ].map(row => (
                 <div key={row.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ color: '#475569', fontSize: 11, fontFamily: 'monospace', minWidth: 28 }}>{row.label}</span>
@@ -315,10 +315,10 @@ function MyEditor() {
           <div style={{ display: 'flex', gap: 8, padding: '12px 20px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9', background: '#fafbfc', alignItems: 'center' }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: 0.8, textTransform: 'uppercase', marginRight: 4 }}>Ref API</span>
             {[
-              { label: 'Focus',          color: '#2563eb', action: () => editorRef.current?.focus() },
-              { label: 'Set Sample HTML',color: '#059669', action: () => editorRef.current?.setValue('<h3>Inserted via <code>ref.setValue()</code></h3><p>This content was set programmatically using the imperative ref API. The editor also supports <strong>rich formatting</strong>, <em>styles</em>, and more.</p>') },
-              { label: 'Get Value',      color: '#d97706', action: () => alert('HTML output:\n\n' + (editorRef.current?.getValue() ?? '').slice(0, 600)) },
-              { label: 'Clear',          color: '#dc2626', action: () => editorRef.current?.clear() },
+              { label: 'Focus', color: '#2563eb', action: () => editorRef.current?.focus() },
+              { label: 'Set Sample HTML', color: '#059669', action: () => editorRef.current?.setValue('<h3>Inserted via <code>ref.setValue()</code></h3><p>This content was set programmatically using the imperative ref API. The editor also supports <strong>rich formatting</strong>, <em>styles</em>, and more.</p>') },
+              { label: 'Get Value', color: '#d97706', action: () => alert('HTML output:\n\n' + (editorRef.current?.getValue() ?? '').slice(0, 600)) },
+              { label: 'Clear', color: '#dc2626', action: () => editorRef.current?.clear() },
             ].map(btn => (
               <button
                 key={btn.label}
