@@ -1,6 +1,6 @@
 {
   "name": "@tarviks/lexical-rich-editor",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A feature-rich Lexical-based rich text editor with autocomplete, spell check, tables, images, and more.",
   "keywords": [
     "lexical",
@@ -18,7 +18,7 @@
   "homepage": "lexical-rich-editor-example.vercel.app",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vikram-capsitech/lexical-rich-editor"
+    "url": "git+https://github.com/vikram-capsitech/lexical-rich-editor.git"
   },
   "main": "dist/index.js",
   "module": "dist/index.mjs",
