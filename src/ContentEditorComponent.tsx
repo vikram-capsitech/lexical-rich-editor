@@ -92,10 +92,12 @@ function FocusEventsPlugin({
   onFocus,
   onBlur,
   setFocused,
+  containerRef,
 }: {
   onFocus?: () => void;
   onBlur?: () => void;
   setFocused: (focused: boolean) => void;
+  containerRef: React.RefObject<HTMLDivElement>;
 }) {
   const [editor] = useLexicalComposerContext();
 
@@ -110,7 +112,10 @@ function FocusEventsPlugin({
 
     const handleFocusOut = (e: FocusEvent) => {
       const next = e.relatedTarget as Node | null;
-      const stillInside = !!next && root.contains(next);
+      // Stay active if focus moved anywhere inside the whole editor container
+      // (e.g. toolbar buttons), not just within the ContentEditable root.
+      const container = containerRef.current;
+      const stillInside = !!next && (container ? container.contains(next) : root.contains(next));
       if (stillInside) return;
 
       editor.update(() => {
@@ -128,7 +133,7 @@ function FocusEventsPlugin({
       root.removeEventListener('focusin', handleFocusIn);
       root.removeEventListener('focusout', handleFocusOut);
     };
-  }, [editor, onBlur, onFocus, setFocused]);
+  }, [editor, onBlur, onFocus, setFocused, containerRef]);
 
   return null;
 }
@@ -302,6 +307,8 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
       focusedRef.current = focused;
     };
 
+    const containerRef = useRef<HTMLDivElement>(null);
+
     const onAnchorRef = (elem: HTMLDivElement | null) => {
       if (elem) setFloatingAnchorElem(elem);
     };
@@ -405,161 +412,164 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
     return (
       <FluentProvider theme={webLightTheme} style={{ height: '100%' }}>
         <LexicalComposer initialConfig={initialConfig}>
-          <Stack
-            style={{
-              zIndex: 1000,
-              background: '#fff',
-              borderRadius: '2px',
-              width: props.width ?? '100%',
-              height: props.height ?? '100%',
-              margin: props.margin ?? '5px auto',
-              border: `1px solid ${isOverLimit ? '#c4272c' : 'var(--colorNeutralStroke1, #ccced1)'
-                }`,
-              transition: 'border-color 0.2s',
-              display: 'flex',
-              flexDirection: 'column',
-            }}>
-            <div
+          <div ref={containerRef} style={{ height: '100%' }}>
+            <Stack
               style={{
-                pointerEvents: isReadOnly ? 'none' : 'auto',
-                position: 'sticky',
-                opacity: isReadOnly ? 0.85 : 1,
+                zIndex: 1000,
+                background: '#fff',
+                borderRadius: '2px',
+                width: props.width ?? '100%',
+                height: props.height ?? '100%',
+                margin: props.margin ?? '5px auto',
+                border: `1px solid ${isOverLimit ? '#c4272c' : 'var(--colorNeutralStroke1, #ccced1)'
+                  }`,
+                transition: 'border-color 0.2s',
+                display: 'flex',
+                flexDirection: 'column',
               }}>
-              <ToolBarPlugins
-                level={props.level ?? ContentEditorLevel.Basic}
-                readOnly={props.readOnly}
-              />
-            </div>
+              <div
+                style={{
+                  pointerEvents: isReadOnly ? 'none' : 'auto',
+                  position: 'sticky',
+                  opacity: isReadOnly ? 0.85 : 1,
+                }}>
+                <ToolBarPlugins
+                  level={props.level ?? ContentEditorLevel.Basic}
+                  readOnly={props.readOnly}
+                />
+              </div>
 
-            <div
-              style={{
-                position: 'relative',
-                flexGrow: 1,
-                padding: '15px 0px',
-                overflowY: 'scroll',
-              }}
-              onClickCapture={handleReadOnlyClickCapture}>
-              <RichTextPlugin
-                ErrorBoundary={LexicalErrorBoundary}
-                contentEditable={
+              <div
+                style={{
+                  position: 'relative',
+                  flexGrow: 1,
+                  padding: '15px 0px',
+                  overflowY: 'scroll',
+                }}
+                onClickCapture={handleReadOnlyClickCapture}>
+                <RichTextPlugin
+                  ErrorBoundary={LexicalErrorBoundary}
+                  contentEditable={
+                    <div
+                      className='editor'
+                      style={{ height: '100%', position: 'relative' }}
+                      ref={onAnchorRef}>
+                      <ContentEditable
+                        ref={contentEditableDomRef}
+                        className={css(EditorStyles.contentEditor)}
+                        style={{ paddingTop: props.level !== ContentEditorLevel.None ? 0 : 10 }}
+                        // Disable browser's built-in spellcheck red squiggles when
+                        // our own SpellCheckPlugin is active — avoids double underlines.
+                        spellCheck={!resolvedSpellCheck}
+                        autoCorrect={resolvedSpellCheck ? 'off' : undefined}
+                        autoCapitalize={resolvedSpellCheck ? 'off' : undefined}
+                      />
+                    </div>
+                  }
+                  placeholder={
+                    <Stack className={css(EditorStyles.editorPlaceholder)}>{props.placeholder}</Stack>
+                  }
+                />
+
+                {/* ── Word count: sticky to the bottom-right of the scroll area ── */}
+                {props.wordLimit !== undefined && (
                   <div
-                    className='editor'
-                    style={{ height: '100%', position: 'relative' }}
-                    ref={onAnchorRef}>
-                    <ContentEditable
-                      ref={contentEditableDomRef}
-                      className={css(EditorStyles.contentEditor)}
-                      style={{ paddingTop: props.level !== ContentEditorLevel.None ? 0 : 10 }}
-                      // Disable browser's built-in spellcheck red squiggles when
-                      // our own SpellCheckPlugin is active — avoids double underlines.
-                      spellCheck={!resolvedSpellCheck}
-                      autoCorrect={resolvedSpellCheck ? 'off' : undefined}
-                      autoCapitalize={resolvedSpellCheck ? 'off' : undefined}
-                    />
-                  </div>
-                }
-                placeholder={
-                  <Stack className={css(EditorStyles.editorPlaceholder)}>{props.placeholder}</Stack>
-                }
-              />
-
-              {/* ── Word count: sticky to the bottom-right of the scroll area ── */}
-              {props.wordLimit !== undefined && (
-                <div
-                  style={{
-                    position: 'sticky',
-                    bottom: 0,
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    paddingRight: 14,
-                    pointerEvents: 'none',
-                    userSelect: 'none',
-                  }}>
-                  <span
                     style={{
-                      fontSize: '11px',
-                      color: isOverLimit ? '#c4272c' : 'var(--colorNeutralForeground3, #aaa)',
-                      fontWeight: isOverLimit ? 600 : 400,
-                      transition: 'color 0.2s, font-weight 0.2s',
+                      position: 'sticky',
+                      bottom: 0,
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      paddingRight: 14,
+                      pointerEvents: 'none',
+                      userSelect: 'none',
                     }}>
-                    {wordCount} / {props.wordLimit} words
-                  </span>
-                </div>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        color: isOverLimit ? '#c4272c' : 'var(--colorNeutralForeground3, #aaa)',
+                        fontWeight: isOverLimit ? 600 : 400,
+                        transition: 'color 0.2s, font-weight 0.2s',
+                      }}>
+                      {wordCount} / {props.wordLimit} words
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <ReadOnlyPlugin readonly={isReadOnly} />
+              <BrowserSpellCheckPlugin enabled={!resolvedSpellCheck} />
+              <FocusEventsPlugin
+                onFocus={props.onFocus}
+                onBlur={props.onBlur}
+                setFocused={setFocused}
+                containerRef={containerRef}
+              />
+
+              {props.autoFocus && !isReadOnly && <AutoFocusPlugin />}
+
+              <HistoryPlugin />
+              <ListPlugin />
+              <LinkPlugin validateUrl={validateUrl} />
+              <AutoLinkPlugin matchers={MATCHERS} />
+              <TablePlugin hasCellMerge hasCellBackgroundColor />
+
+              {!isReadOnly && <YoutubeDeletePlugin />}
+
+              {!isReadOnly && floatingAnchorElem && <TableActionMenuPlugin />}
+              {!isReadOnly && floatingAnchorElem && (
+                <TableCellResizerPlugin anchorElem={floatingAnchorElem} />
               )}
-            </div>
 
-            <ReadOnlyPlugin readonly={isReadOnly} />
-            <BrowserSpellCheckPlugin enabled={!resolvedSpellCheck} />
-            <FocusEventsPlugin
-              onFocus={props.onFocus}
-              onBlur={props.onBlur}
-              setFocused={setFocused}
-            />
+              {!isReadOnly && (
+                <FloatingLinkEditorPlugin
+                  anchorElem={floatingAnchorElem}
+                  isLinkEditMode={isLinkEditMode}
+                  setIsLinkEditMode={setIsLinkEditMode}
+                />
+              )}
 
-            {props.autoFocus && !isReadOnly && <AutoFocusPlugin />}
+              {!isReadOnly && <ImagesPlugin />}
+              {!isReadOnly && <InlineImagePlugin />}
+              {!isReadOnly && <PageBreakPlugin />}
 
-            <HistoryPlugin />
-            <ListPlugin />
-            <LinkPlugin validateUrl={validateUrl} />
-            <AutoLinkPlugin matchers={MATCHERS} />
-            <TablePlugin hasCellMerge hasCellBackgroundColor />
+              {/* ── Autocomplete (optimised) ────────────────────────────── */}
+              {!!resolvedQuery && !isReadOnly && (
+                <AutocompletePlugin
+                  useQuery={resolvedQuery}
+                  isReadOnly={isReadOnly}
+                  onSuggestionShown={props.onSuggestionShown}
+                  onSuggestionAccept={props.onSuggestionAccept}
+                  idleMs={props.suggestIdleMs ?? 300}
+                  minWords={4}
+                  prefixWindow={300}
+                />
+              )}
 
-            {!isReadOnly && <YoutubeDeletePlugin />}
+              {/* ── Spell / grammar check (NEW) ─────────────────────────── */}
+              {!!resolvedSpellCheck && !isReadOnly && (
+                <SpellCheckPlugin
+                  useSpellCheck={resolvedSpellCheck}
+                  onSpellCheckAccept={props.onSpellCheckAccept}
+                  idleMs={props.spellCheckIdleMs ?? 1200}
+                  enabled={props.spellCheckEnabled !== false}
+                />
+              )}
 
-            {!isReadOnly && floatingAnchorElem && <TableActionMenuPlugin />}
-            {!isReadOnly && floatingAnchorElem && (
-              <TableCellResizerPlugin anchorElem={floatingAnchorElem} />
-            )}
-
-            {!isReadOnly && (
-              <FloatingLinkEditorPlugin
-                anchorElem={floatingAnchorElem}
-                isLinkEditMode={isLinkEditMode}
-                setIsLinkEditMode={setIsLinkEditMode}
+              {!isReadOnly && props.showFloatingToolbar && <CharacterStylesPopupPlugin />}
+              <CustomOnChangePlugin
+                value={props.value}
+                onChange={props.onChange}
               />
-            )}
 
-            {!isReadOnly && <ImagesPlugin />}
-            {!isReadOnly && <InlineImagePlugin />}
-            {!isReadOnly && <PageBreakPlugin />}
+              {props.wordLimit !== undefined && <WordCountPlugin onCountChange={handleWordCount} />}
 
-            {/* ── Autocomplete (optimised) ────────────────────────────── */}
-            {!!resolvedQuery && !isReadOnly && (
-              <AutocompletePlugin
-                useQuery={resolvedQuery}
-                isReadOnly={isReadOnly}
-                onSuggestionShown={props.onSuggestionShown}
-                onSuggestionAccept={props.onSuggestionAccept}
-                idleMs={props.suggestIdleMs ?? 300}
-                minWords={4}
-                prefixWindow={300}
+              <RefApiPlugin
+                forwardedRef={ref}
+                contentEditableDomRef={contentEditableDomRef}
+                focusedRef={focusedRef}
               />
-            )}
-
-            {/* ── Spell / grammar check (NEW) ─────────────────────────── */}
-            {!!resolvedSpellCheck && !isReadOnly && (
-              <SpellCheckPlugin
-                useSpellCheck={resolvedSpellCheck}
-                onSpellCheckAccept={props.onSpellCheckAccept}
-                idleMs={props.spellCheckIdleMs ?? 1200}
-                enabled={props.spellCheckEnabled !== false}
-              />
-            )}
-
-            {!isReadOnly && props.showFloatingToolbar && <CharacterStylesPopupPlugin />}
-            <CustomOnChangePlugin
-              value={props.value}
-              onChange={props.onChange}
-            />
-
-            {props.wordLimit !== undefined && <WordCountPlugin onCountChange={handleWordCount} />}
-
-            <RefApiPlugin
-              forwardedRef={ref}
-              contentEditableDomRef={contentEditableDomRef}
-              focusedRef={focusedRef}
-            />
-          </Stack>
+            </Stack>
+          </div>
         </LexicalComposer>
       </FluentProvider>
     );
