@@ -3549,7 +3549,7 @@ __metadata:
     "@types/react-dom": "npm:^18.3.0"
     "@vitejs/plugin-react": "npm:^4.3.4"
     lexical: "npm:^0.44.0"
-    lexical-rich-editor: "link:.."
+    lexical-rich-editor: "file:.."
     react: "npm:^18.3.1"
     react-dom: "npm:^18.3.1"
     typescript: "npm:^5.8.3"
@@ -3557,11 +3557,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"lexical-rich-editor@link:..::locator=lexical-rich-editor-example%40workspace%3Aexample":
-  version: 0.0.0-use.local
-  resolution: "lexical-rich-editor@link:..::locator=lexical-rich-editor-example%40workspace%3Aexample"
+"lexical-rich-editor@file:..::locator=lexical-rich-editor-example%40workspace%3Aexample":
+  version: 1.0.4
+  resolution: "lexical-rich-editor@file:..#..::hash=a0cb06&locator=lexical-rich-editor-example%40workspace%3Aexample"
+  peerDependencies:
+    "@fluentui/react": ">=8.0.0"
+    "@fluentui/react-components": ">=9.0.0"
+    "@fluentui/react-icons": ">=2.0.0"
+    "@lexical/code": ">=0.44.0"
+    "@lexical/link": ">=0.44.0"
+    "@lexical/list": ">=0.44.0"
+    "@lexical/react": ">=0.44.0"
+    "@lexical/rich-text": ">=0.44.0"
+    "@lexical/table": ">=0.44.0"
+    "@lexical/utils": ">=0.44.0"
+    lexical: ">=0.44.0"
+    react: ">=18.0.0"
+    react-dom: ">=18.0.0"
+  checksum: 10c0/ff4359ee869f7cab7444922b5fe66c97de88b3b3a57731dc13e7fe9e1d499ee9696c29d267d1a7a08aeaeb49e534d1890dc6792a2d282d80962a4925f2734f70
   languageName: node
-  linkType: soft
+  linkType: hard
 
 "lexical@npm:0.44.0, lexical@npm:^0.44.0":
   version: 0.44.0
