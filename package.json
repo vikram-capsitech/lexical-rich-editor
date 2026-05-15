@@ -15,10 +15,11 @@
     "email": "lazydevelopers.team@gmail.com"
   },
   "license": "MIT",
-  "homepage": "https://github.com/capsitech/lexical-rich-editor",
+  "private": "true",
+  "homepage": "lexical-rich-editor-example.vercel.app",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/capsitech/lexical-rich-editor.git"
+    "url": "git+https://github.com/vikram-capsitech/lexical-rich-editor"
   },
   "main": "dist/index.js",
   "module": "dist/index.mjs",
