@@ -2924,7 +2924,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tarviks/lexical-rich-editor@workspace:*, @tarviks/lexical-rich-editor@workspace:.":
+"@tarviks/lexical-rich-editor@workspace:.":
   version: 0.0.0-use.local
   resolution: "@tarviks/lexical-rich-editor@workspace:."
   dependencies:
@@ -3545,7 +3545,6 @@ __metadata:
     "@lexical/selection": "npm:^0.44.0"
     "@lexical/table": "npm:^0.44.0"
     "@lexical/utils": "npm:^0.44.0"
-    "@tarviks/lexical-rich-editor": "workspace:*"
     "@types/react": "npm:^18.3.7"
     "@types/react-dom": "npm:^18.3.0"
     "@vitejs/plugin-react": "npm:^4.3.4"
