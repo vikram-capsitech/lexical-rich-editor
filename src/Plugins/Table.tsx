@@ -11,13 +11,20 @@ import { TableAddRegular } from '@fluentui/react-icons';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $createTableNodeWithDimensions } from '@lexical/table';
 import { $insertNodeToNearestRoot } from '@lexical/utils';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
   const [editor] = useLexicalComposerContext();
   const [columns, setColumns] = useState('');
   const [rows, setRows] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const rowsInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      rowsInputRef.current?.focus({ preventScroll: true });
+    }
+  }, [isOpen]);
 
   const iconColor = disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#333333';
 
@@ -42,6 +49,7 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
     <Popover
       trapFocus
       withArrow
+      positioning="below-start"
       open={disabled ? false : isOpen}
       onOpenChange={(_, data) => {
         if (!disabled) setIsOpen(data.open);
@@ -79,7 +87,7 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
         <Stack tokens={{ childrenGap: 10 }}>
           <Field label='Rows' orientation='horizontal' size='small'>
             <Input
-              autoFocus={!disabled}
+              ref={rowsInputRef}
               value={rows}
               placeholder='Rows'
               appearance='underline'

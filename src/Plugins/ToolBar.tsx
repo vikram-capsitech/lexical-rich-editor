@@ -2,7 +2,6 @@ import { Stack, useTheme } from '@fluentui/react';
 import { Button, Dropdown, makeStyles, Option, ToolbarDivider } from '@fluentui/react-components';
 import {
   CommentQuoteRegular,
-  DeleteRegular,
   DocumentPageBreakRegular,
   HighlightAccentFilled,
   TextAlignCenterFilled,
@@ -38,7 +37,6 @@ import {
 import { $setBlocksType } from '@lexical/selection';
 import { $getNearestNodeOfType, mergeRegister } from '@lexical/utils';
 import {
-  $getNodeByKey,
   $getSelection,
   $isRangeSelection,
   FORMAT_ELEMENT_COMMAND,
@@ -152,8 +150,6 @@ export const ToolBarPlugins = (props: IEditorProps) => {
   const [isLowercase, setIsLowercase] = useState(false);
   const [isCapitalize, setIsCapitalize] = useState(false);
   const [alignment, setAlignment] = useState<string>('left');
-  const [isInTable, setIsInTable] = useState(false);
-  const [tableNodeKey, setTableNodeKey] = useState<string | null>(null);
 
   const presetGroups = getToolbarGroupsByLevel(props.level);
 
@@ -175,8 +171,6 @@ export const ToolBarPlugins = (props: IEditorProps) => {
       setIsLowercase(false);
       setIsCapitalize(false);
       setSelectNodeType('paragraph');
-      setIsInTable(false);
-      setTableNodeKey(null);
       return;
     }
 
@@ -196,25 +190,8 @@ export const ToolBarPlugins = (props: IEditorProps) => {
     // root selection -> paragraph
     if (anchorNode.getKey() === 'root') {
       setSelectNodeType('paragraph');
-      setIsInTable(false);
-      setTableNodeKey(null);
       return;
     }
-
-    // ── Detect table ancestry by walking up the node tree ───────────────────
-    // TableNode is a Lexical shadow root, so getTopLevelElementOrThrow()
-    // returns the cell paragraph — we must climb ancestors to find the table.
-    let tableAncestorKey: string | null = null;
-    let cursor = anchorNode.getParent();
-    while (cursor !== null) {
-      if (cursor.getType() === 'table') {
-        tableAncestorKey = cursor.getKey();
-        break;
-      }
-      cursor = cursor.getParent();
-    }
-    setIsInTable(tableAncestorKey !== null);
-    setTableNodeKey(tableAncestorKey);
 
     // element = the cell-level block (paragraph / heading inside the cell),
     // or the top-level block when not in a table — correct for all toolbar state.
@@ -786,38 +763,6 @@ export const ToolBarPlugins = (props: IEditorProps) => {
         ))}
       </div>
 
-      {isInTable && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '2px 8px',
-            borderBottom: '1px solid #ccced1',
-            background: '#fff8f8',
-          }}>
-          <span style={{ fontSize: 12, color: '#888', userSelect: 'none' }}>Table</span>
-          <Button
-            size='small'
-            icon={<DeleteRegular style={{ color: '#c4272c' }} />}
-            title='Delete table'
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#c4272c',
-              fontWeight: 500,
-            }}
-            onClick={() => {
-              editor.update(() => {
-                if (!tableNodeKey) return;
-                const node = $getNodeByKey(tableNodeKey);
-                if (node?.getType() === 'table') node.remove();
-              });
-            }}>
-            Delete Table
-          </Button>
-        </div>
-      )}
     </Stack>
   );
 };

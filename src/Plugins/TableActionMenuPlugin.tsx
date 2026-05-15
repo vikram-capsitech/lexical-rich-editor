@@ -30,6 +30,7 @@ import {
   MenuItem,
   MenuList,
   MenuPopover,
+  MenuTrigger,
 } from '@fluentui/react-components';
 
 import {
@@ -37,6 +38,7 @@ import {
   ArrowLeftRegular,
   ArrowRightRegular,
   ArrowUpRegular,
+  ChevronDown12Regular,
   ColumnTripleRegular,
   DeleteRegular,
   RowTripleRegular,
@@ -48,8 +50,8 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
   const [editor] = useLexicalComposerContext();
 
   const [isInTable, setIsInTable] = React.useState(false);
+  const [anchorRect, setAnchorRect] = React.useState<DOMRect | null>(null);
   const [open, setOpen] = React.useState(false);
-  const [menuPos, setMenuPos] = React.useState<{ x: number; y: number } | null>(null);
 
   const updateFromSelection = React.useCallback(() => {
     const root = editor.getRootElement();
@@ -61,13 +63,18 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       if ($isTableSelection(selection)) {
         const tableNode = selection.getNodes().find((n) => $isTableNode(n));
         if (tableNode) {
-          setIsInTable(true);
-          return;
+          const dom = editor.getElementByKey(tableNode.getKey());
+          if (dom) {
+            setIsInTable(true);
+            setAnchorRect(dom.getBoundingClientRect());
+            return;
+          }
         }
       }
 
       if (!$isRangeSelection(selection)) {
         setIsInTable(false);
+        setAnchorRect(null);
         return;
       }
 
@@ -78,10 +85,19 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
 
       if (!cellNode || !$isTableCellNode(cellNode)) {
         setIsInTable(false);
+        setAnchorRect(null);
+        return;
+      }
+
+      const cellDom = editor.getElementByKey(cellNode.getKey());
+      if (!cellDom) {
+        setIsInTable(false);
+        setAnchorRect(null);
         return;
       }
 
       setIsInTable(true);
+      setAnchorRect(cellDom.getBoundingClientRect());
     });
   }, [editor]);
 
@@ -157,39 +173,21 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
     if (!isInTable && open) setOpen(false);
   }, [isInTable, open]);
 
-  React.useEffect(() => {
-    const root = editor.getRootElement();
-    if (!root) return;
+  const canShow = isInTable && !!anchorRect && !disabled;
 
-    const handleContextMenu = (e: MouseEvent) => {
-      if (disabled) return;
+  const handleStyle: React.CSSProperties | undefined = React.useMemo(() => {
+    if (!anchorRect) return undefined;
 
-      let inTable = false;
-      editor.getEditorState().read(() => {
-        const selection = $getSelection();
-        if ($isTableSelection(selection)) {
-          inTable = true;
-          return;
-        }
-        if ($isRangeSelection(selection)) {
-          const node = selection.anchor.getNode();
-          const cell = $isTableCellNode(node)
-            ? node
-            : $findMatchingParent(node, (n) => $isTableCellNode(n));
-          if (cell) inTable = true;
-        }
-      });
+    const top = Math.max(8, anchorRect.top + 6);
+    const left = Math.max(8, anchorRect.right - 34);
 
-      if (inTable) {
-        e.preventDefault();
-        setMenuPos({ x: e.clientX, y: e.clientY });
-        setOpen(true);
-      }
+    return {
+      position: 'fixed',
+      top,
+      left,
+      zIndex: 9999,
     };
-
-    root.addEventListener('contextmenu', handleContextMenu);
-    return () => root.removeEventListener('contextmenu', handleContextMenu);
-  }, [editor, disabled]);
+  }, [anchorRect]);
 
   const dangerStyle: React.CSSProperties = {
     color: 'var(--colorPaletteRedForeground1)',
@@ -198,6 +196,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
   const run = React.useCallback(
     (fn: () => void) => {
       if (disabled) return;
+
       editor.focus();
       editor.update(() => fn());
       setOpen(false);
@@ -207,8 +206,10 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
 
   const insertRowBelow = () => run(() => $insertTableRowAtSelection(true));
   const insertRowAbove = () => run(() => $insertTableRowAtSelection(false));
+
   const insertColRight = () => run(() => $insertTableColumnAtSelection(true));
   const insertColLeft = () => run(() => $insertTableColumnAtSelection(false));
+
   const deleteRow = () => run(() => $deleteTableRowAtSelection());
   const deleteCol = () => run(() => $deleteTableColumnAtSelection());
 
@@ -235,81 +236,88 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       table.remove();
     });
 
-  const virtualTarget = React.useMemo(() => {
-    if (!menuPos) return undefined;
-    return {
-      getBoundingClientRect: () => new DOMRect(menuPos.x, menuPos.y, 0, 0),
-    };
-  }, [menuPos]);
-
-  if (disabled) return null;
+  if (!canShow || !handleStyle) return null;
 
   return createPortal(
-    <Menu open={open} onOpenChange={(_, data) => setOpen(data.open)} positioning={{ target: virtualTarget }}>
-      <MenuPopover className='aoTableActionPopover'>
-        <MenuList>
-          <MenuGroup>
-            <MenuGroupHeader>Insert</MenuGroupHeader>
+    <div style={handleStyle} className='aoTableActionHandleRoot'>
+      <Menu open={open} onOpenChange={(_, data) => setOpen(data.open)}>
+        <MenuTrigger disableButtonEnhancement>
+          <button
+            type='button'
+            className='aoTableActionHandleBtn'
+            aria-label='Table options'
+            onMouseDown={(e) => {
+              e.preventDefault();
+            }}>
+            <ChevronDown12Regular />
+          </button>
+        </MenuTrigger>
 
-            <MenuItem icon={<RowTripleRegular />} onClick={insertRowAbove}>
-              <span className='aoMenuRow'>
-                <span className='aoMenuLabel'>
-                  <ArrowUpRegular /> Row above
-                </span>
-                <span className='aoMenuShortcut'>Alt ⇧ ↑</span>
-              </span>
-            </MenuItem>
+        <MenuPopover className='aoTableActionPopover'>
+          <MenuList>
+            <MenuGroup>
+              <MenuGroupHeader>Insert</MenuGroupHeader>
 
-            <MenuItem icon={<RowTripleRegular />} onClick={insertRowBelow}>
-              <span className='aoMenuRow'>
-                <span className='aoMenuLabel'>
-                  <ArrowDownRegular /> Row below
+              <MenuItem icon={<RowTripleRegular />} onClick={insertRowAbove}>
+                <span className='aoMenuRow'>
+                  <span className='aoMenuLabel'>
+                    <ArrowUpRegular /> Row above
+                  </span>
+                  <span className='aoMenuShortcut'>Alt ⇧ ↑</span>
                 </span>
-                <span className='aoMenuShortcut'>Alt ⇧ ↓</span>
-              </span>
-            </MenuItem>
+              </MenuItem>
+
+              <MenuItem icon={<RowTripleRegular />} onClick={insertRowBelow}>
+                <span className='aoMenuRow'>
+                  <span className='aoMenuLabel'>
+                    <ArrowDownRegular /> Row below
+                  </span>
+                  <span className='aoMenuShortcut'>Alt ⇧ ↓</span>
+                </span>
+              </MenuItem>
+
+              <MenuDivider />
+
+              <MenuItem icon={<ColumnTripleRegular />} onClick={insertColLeft}>
+                <span className='aoMenuRow'>
+                  <span className='aoMenuLabel'>
+                    <ArrowLeftRegular /> Column left
+                  </span>
+                  <span className='aoMenuShortcut'>Alt ⇧ ←</span>
+                </span>
+              </MenuItem>
+
+              <MenuItem icon={<ColumnTripleRegular />} onClick={insertColRight}>
+                <span className='aoMenuRow'>
+                  <span className='aoMenuLabel'>
+                    <ArrowRightRegular /> Column right
+                  </span>
+                  <span className='aoMenuShortcut'>Alt ⇧ →</span>
+                </span>
+              </MenuItem>
+            </MenuGroup>
 
             <MenuDivider />
 
-            <MenuItem icon={<ColumnTripleRegular />} onClick={insertColLeft}>
-              <span className='aoMenuRow'>
-                <span className='aoMenuLabel'>
-                  <ArrowLeftRegular /> Column left
-                </span>
-                <span className='aoMenuShortcut'>Alt ⇧ ←</span>
-              </span>
-            </MenuItem>
+            <MenuGroup>
+              <MenuGroupHeader>Delete</MenuGroupHeader>
 
-            <MenuItem icon={<ColumnTripleRegular />} onClick={insertColRight}>
-              <span className='aoMenuRow'>
-                <span className='aoMenuLabel'>
-                  <ArrowRightRegular /> Column right
-                </span>
-                <span className='aoMenuShortcut'>Alt ⇧ →</span>
-              </span>
-            </MenuItem>
-          </MenuGroup>
+              <MenuItem icon={<DeleteRegular />} onClick={deleteRow} style={dangerStyle}>
+                Delete row
+              </MenuItem>
 
-          <MenuDivider />
+              <MenuItem icon={<DeleteRegular />} onClick={deleteCol} style={dangerStyle}>
+                Delete column
+              </MenuItem>
 
-          <MenuGroup>
-            <MenuGroupHeader>Delete</MenuGroupHeader>
-
-            <MenuItem icon={<DeleteRegular />} onClick={deleteRow} style={dangerStyle}>
-              Delete row
-            </MenuItem>
-
-            <MenuItem icon={<DeleteRegular />} onClick={deleteCol} style={dangerStyle}>
-              Delete column
-            </MenuItem>
-
-            <MenuItem icon={<DeleteRegular />} onClick={deleteTable} style={dangerStyle}>
-              Delete table
-            </MenuItem>
-          </MenuGroup>
-        </MenuList>
-      </MenuPopover>
-    </Menu>,
+              <MenuItem icon={<DeleteRegular />} onClick={deleteTable} style={dangerStyle}>
+                Delete table
+              </MenuItem>
+            </MenuGroup>
+          </MenuList>
+        </MenuPopover>
+      </Menu>
+    </div>,
     document.body,
   );
 }
