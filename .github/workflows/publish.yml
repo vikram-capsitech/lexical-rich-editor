@@ -11,19 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write   # for npm provenance
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Enable Corepack (Yarn 4)
+        run: corepack enable
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: yarn
           registry-url: https://registry.npmjs.org
-
-      - name: Enable Corepack (Yarn 4)
-        run: corepack enable
 
       - name: Install dependencies
         run: yarn install --immutable
