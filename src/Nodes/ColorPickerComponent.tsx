@@ -184,6 +184,32 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
     [],
   );
 
+  // Since scroll/resize no longer auto-close the callout, it must instead
+  // actively follow the button as the page scrolls. Fluent recalculates the
+  // Callout's position on every render of this component (its internal
+  // effect depends on the whole `props` object, which is a new reference
+  // each render), so forcing a re-render on scroll/resize is enough to keep
+  // it correctly anchored — no manual position math needed.
+  const [, forceReposition] = React.useState(0);
+  React.useEffect(() => {
+    if (!open) return;
+    let rafId: number | null = null;
+    const reposition = () => {
+      if (rafId != null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        forceReposition((n) => n + 1);
+      });
+    };
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    return () => {
+      if (rafId != null) cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+    };
+  }, [open]);
+
   const [hex, setHex] = React.useState<string>(normalizeHex(value || '#000000'));
 
   const { r, g, b } = React.useMemo(() => hexToRgb(hex), [hex]);
