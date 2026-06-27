@@ -23,7 +23,6 @@ export const CustomOnChangePlugin = ({ value, onChange }: ICustomOnChangePluginP
     initializedRef.current = true;
 
     editor.update(() => {
-
       const root = $getRoot();
       root.clear();
 

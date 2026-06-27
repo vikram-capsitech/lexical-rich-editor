@@ -272,7 +272,9 @@ span.editor-image {
   border-collapse: collapse;
   border-spacing: 0;
   margin: 12px 0;
-  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+  table-layout: fixed;
 }
 
 .lexical-table-row {
@@ -281,11 +283,17 @@ span.editor-image {
 .lexical-table-cell,
 .lexical-table-cell-header {
   border: 1px solid #c8c8c8;
-  padding: 10px;
-  min-width: 90px;
-  vertical-align: top;
+  width: 60px;
+  height: 60px;
+  padding: 4px;
+  vertical-align: middle;
+  text-align: center;
   position: relative;
   background: #ffffff;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .lexical-table-cell-header {
@@ -338,12 +346,26 @@ span.editor-image {
 /* scope to your wrapper class if possible */
 .editor {
   line-height: 1.25;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* emails/signatures rely on tight paragraphs */
 .editor p {
   margin: 0;
   line-height: 1.25;
+}
+
+/* Remove browser-default block margins from headings so a single
+   headed line doesn't push adjacent lines far apart */
+.editor h1,
+.editor h2,
+.editor h3,
+.editor h4,
+.editor h5,
+.editor h6 {
+  margin: 0;
+  line-height: 1.2;
 }
 
 /* pasted signatures often contain divs */

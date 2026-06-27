@@ -109,11 +109,11 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
           updateFromSelection();
           return false;
         },
-        COMMAND_PRIORITY_LOW,
+        COMMAND_PRIORITY_LOW
       ),
       editor.registerUpdateListener(() => {
         updateFromSelection();
-      }),
+      })
     );
   }, [editor, updateFromSelection]);
 
@@ -165,7 +165,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
             return false;
         }
       },
-      COMMAND_PRIORITY_HIGH,
+      COMMAND_PRIORITY_HIGH
     );
   }, [editor, disabled]);
 
@@ -201,7 +201,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       editor.update(() => fn());
       setOpen(false);
     },
-    [disabled, editor],
+    [disabled, editor]
   );
 
   const insertRowBelow = () => run(() => $insertTableRowAtSelection(true));
@@ -318,6 +318,6 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
         </MenuPopover>
       </Menu>
     </div>,
-    document.body,
+    document.body
   );
 }

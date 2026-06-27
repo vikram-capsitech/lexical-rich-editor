@@ -11,20 +11,13 @@ import { TableAddRegular } from '@fluentui/react-icons';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $createTableNodeWithDimensions } from '@lexical/table';
 import { $insertNodeToNearestRoot } from '@lexical/utils';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
   const [editor] = useLexicalComposerContext();
   const [columns, setColumns] = useState('');
   const [rows, setRows] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const rowsInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      rowsInputRef.current?.focus({ preventScroll: true });
-    }
-  }, [isOpen]);
 
   const iconColor = disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#333333';
 
@@ -49,7 +42,6 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
     <Popover
       trapFocus
       withArrow
-      positioning="below-start"
       open={disabled ? false : isOpen}
       onOpenChange={(_, data) => {
         if (!disabled) setIsOpen(data.open);
@@ -87,22 +79,28 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
         <Stack tokens={{ childrenGap: 10 }}>
           <Field label='Rows' orientation='horizontal' size='small'>
             <Input
-              ref={rowsInputRef}
+              autoFocus={!disabled}
+              type='number'
+              min={1}
               value={rows}
               placeholder='Rows'
               appearance='underline'
               disabled={disabled}
-              onChange={(_, v) => setRows(v.value)}
+              input={{ style: { textAlign: 'left' } }}
+              onChange={(_, v) => setRows(v.value.replace(/\D/g, ''))}
             />
           </Field>
 
           <Field label='Columns' orientation='horizontal' size='small'>
             <Input
+              type='number'
+              min={1}
               value={columns}
               placeholder='Columns'
               appearance='underline'
               disabled={disabled}
-              onChange={(_, v) => setColumns(v.value)}
+              input={{ style: { textAlign: 'left' } }}
+              onChange={(_, v) => setColumns(v.value.replace(/\D/g, ''))}
             />
           </Field>
 
