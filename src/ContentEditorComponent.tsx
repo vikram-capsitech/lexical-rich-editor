@@ -1,5 +1,6 @@
 import { css, mergeStyleSets, Stack } from '@fluentui/react';
 import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { ErrorCircleRegular } from '@fluentui/react-icons';
 import { CodeHighlightNode, CodeNode } from '@lexical/code';
 import { AutoLinkNode, LinkNode } from '@lexical/link';
 import { ListItemNode, ListNode } from '@lexical/list';
@@ -52,6 +53,7 @@ import TableActionMenuPlugin from './Plugins/TableActionMenuPlugin';
 import TableCellResizerPlugin from './Plugins/TableCellResizer';
 import { ToolBarPlugins } from './Plugins/ToolBar';
 import YoutubeDeletePlugin from './Plugins/YoutubeDeletePlugin';
+import { $getRoot } from 'lexical';
 import { theme } from './Theme';
 
 function ReadOnlyPlugin({ readonly }: { readonly: boolean }) {
@@ -79,10 +81,24 @@ function BrowserSpellCheckPlugin({ enabled }: { enabled: boolean }) {
 function WordCountPlugin({ onCountChange }: { onCountChange: (count: number) => void }) {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
-    return editor.registerUpdateListener(() => {
-      const text = editor.getRootElement()?.innerText ?? '';
-      const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
-      onCountChange(words);
+    return editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
+        const text = $getRoot().getTextContent();
+        const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+        onCountChange(words);
+      });
+    });
+  }, [editor, onCountChange]);
+  return null;
+}
+
+function CharCountPlugin({ onCountChange }: { onCountChange: (count: number) => void }) {
+  const [editor] = useLexicalComposerContext();
+  useEffect(() => {
+    return editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
+        onCountChange($getRoot().getTextContent().length);
+      });
     });
   }, [editor, onCountChange]);
   return null;
@@ -299,6 +315,11 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
     const [wordCount, setWordCount] = useState(0);
     const handleWordCount = useCallback((count: number) => setWordCount(count), []);
 
+    const [charCount, setCharCount] = useState(0);
+    const handleCharCount = useCallback((count: number) => setCharCount(count), []);
+
+    const [refErrors, setRefErrors] = useState<string[]>([]);
+
     const contentEditableDomRef = useRef<HTMLDivElement>(null);
     const previousOverLimitRef = useRef(false);
 
@@ -391,7 +412,58 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
       }
     };
 
+    const [touched, setTouched] = useState(false);
+
     const isOverLimit = props.wordLimit !== undefined && wordCount > props.wordLimit;
+
+    // Built-in validation messages generated automatically by the editor.
+    const internalErrors: string[] = [];
+
+    if (isOverLimit) {
+      const m = props.errorMessages?.wordLimitExceeded;
+      internalErrors.push(
+        typeof m === 'function'
+          ? m(wordCount, props.wordLimit!)
+          : m ?? `Word limit exceeded (${wordCount} / ${props.wordLimit} words used)`,
+      );
+    }
+
+    if (props.required && touched && wordCount === 0) {
+      internalErrors.push(
+        props.errorMessages?.required ?? 'This field is required',
+      );
+    }
+
+    if (props.minWords !== undefined && touched && wordCount < props.minWords) {
+      const m = props.errorMessages?.minWords;
+      internalErrors.push(
+        typeof m === 'function'
+          ? m(wordCount, props.minWords)
+          : m ?? `Minimum ${props.minWords} words required (${wordCount} entered)`,
+      );
+    }
+
+    if (props.maxChars !== undefined && charCount > props.maxChars) {
+      const m = props.errorMessages?.maxCharsExceeded;
+      internalErrors.push(
+        typeof m === 'function'
+          ? m(charCount, props.maxChars)
+          : m ?? `Character limit exceeded (${charCount} / ${props.maxChars} characters used)`,
+      );
+    }
+
+    if (props.minChars !== undefined && touched && charCount < props.minChars && charCount > 0) {
+      const m = props.errorMessages?.minCharsRequired;
+      internalErrors.push(
+        typeof m === 'function'
+          ? m(charCount, props.minChars)
+          : m ?? `Minimum ${props.minChars} characters required (${charCount} entered)`,
+      );
+    }
+
+    const allErrors: string[] = [...internalErrors, ...(props.errors ?? []), ...refErrors];
+    const hasErrors = allErrors.length > 0;
+    const hasRedBorder = hasErrors;
 
     useEffect(() => {
       if (props.wordLimit === undefined || !props.onWordLimitExceeded) return;
@@ -412,6 +484,22 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
     return (
       <FluentProvider theme={webLightTheme} style={{ height: '100%' }}>
         <LexicalComposer initialConfig={initialConfig}>
+          <Stack
+            style={{
+              zIndex: 1000,
+              background: '#fff',
+              borderRadius: '2px',
+              width: props.width ?? '100%',
+              height: props.height ?? '100%',
+              margin: props.margin ?? '5px auto',
+              border: `1px solid ${
+                hasRedBorder ? '#c4272c' : 'var(--colorNeutralStroke1, #ccced1)'
+              }`,
+              transition: 'border-color 0.2s',
+              display: 'flex',
+              flexDirection: 'column',
+            }}>
+            <div
           <div ref={containerRef} style={{ height: '100%' }}>
             <Stack
               style={{
@@ -427,6 +515,25 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
                 display: 'flex',
                 flexDirection: 'column',
               }}>
+              <ToolBarPlugins
+                level={props.level ?? ContentEditorLevel.Basic}
+                readOnly={props.readOnly}
+              />
+            </div>
+
+            <div
+              style={{
+                position: 'relative',
+                flexGrow: 1,
+                padding: '15px 0px',
+                overflowY: 'scroll',
+                overflowX: 'auto',
+                minWidth: 0,
+              }}
+              onClickCapture={handleReadOnlyClickCapture}>
+              <RichTextPlugin
+                ErrorBoundary={LexicalErrorBoundary}
+                contentEditable={
               <div
                 style={{
                   pointerEvents: isReadOnly ? 'none' : 'auto',
@@ -519,6 +626,82 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
               {!isReadOnly && floatingAnchorElem && (
                 <TableCellResizerPlugin anchorElem={floatingAnchorElem} />
               )}
+            </div>
+
+            {hasErrors && (
+              <div
+                style={{
+                  borderTop: '1px solid #fbd5d5',
+                  background: '#fff8f8',
+                  padding: '6px 12px 8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                }}>
+                {allErrors.map((err, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ErrorCircleRegular style={{ fontSize: 14, color: '#c4272c', flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, color: '#c4272c' }}>{err}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <ReadOnlyPlugin readonly={isReadOnly} />
+            <BrowserSpellCheckPlugin enabled={!resolvedSpellCheck} />
+            <FocusEventsPlugin
+              onFocus={props.onFocus}
+              onBlur={() => { setTouched(true); props.onBlur?.(); }}
+              setFocused={setFocused}
+            />
+
+            {props.autoFocus && !isReadOnly && <AutoFocusPlugin />}
+
+            <HistoryPlugin />
+            <ListPlugin />
+            <LinkPlugin validateUrl={validateUrl} />
+            <AutoLinkPlugin matchers={MATCHERS} />
+            <TablePlugin hasCellMerge hasCellBackgroundColor />
+
+            {!isReadOnly && <YoutubeDeletePlugin />}
+
+            {!isReadOnly && floatingAnchorElem && <TableActionMenuPlugin />}
+            {!isReadOnly && floatingAnchorElem && (
+              <TableCellResizerPlugin anchorElem={floatingAnchorElem} />
+            )}
+
+            {!isReadOnly && (
+              <FloatingLinkEditorPlugin
+                anchorElem={floatingAnchorElem}
+                isLinkEditMode={isLinkEditMode}
+                setIsLinkEditMode={setIsLinkEditMode}
+              />
+            )}
+
+            {!isReadOnly && <ImagesPlugin />}
+            {!isReadOnly && <InlineImagePlugin />}
+            {!isReadOnly && <PageBreakPlugin />}
+
+            {!!resolvedQuery && !isReadOnly && (
+              <AutocompletePlugin
+                useQuery={resolvedQuery}
+                isReadOnly={isReadOnly}
+                onSuggestionShown={props.onSuggestionShown}
+                onSuggestionAccept={props.onSuggestionAccept}
+                idleMs={props.suggestIdleMs ?? 300}
+                minWords={4}
+                prefixWindow={300}
+              />
+            )}
+
+            {!!resolvedSpellCheck && !isReadOnly && (
+              <SpellCheckPlugin
+                useSpellCheck={resolvedSpellCheck}
+                onSpellCheckAccept={props.onSpellCheckAccept}
+                idleMs={props.spellCheckIdleMs ?? 1200}
+                enabled={props.spellCheckEnabled !== false}
+              />
+            )}
 
               {!isReadOnly && (
                 <FloatingLinkEditorPlugin
@@ -528,6 +711,21 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
                 />
               )}
 
+            {(props.wordLimit !== undefined || props.required || props.minWords !== undefined) && (
+              <WordCountPlugin onCountChange={handleWordCount} />
+            )}
+
+            {(props.maxChars !== undefined || props.minChars !== undefined) && (
+              <CharCountPlugin onCountChange={handleCharCount} />
+            )}
+
+            <RefApiPlugin
+              forwardedRef={ref}
+              contentEditableDomRef={contentEditableDomRef}
+              focusedRef={focusedRef}
+              setRefErrors={setRefErrors}
+            />
+          </Stack>
               {!isReadOnly && <ImagesPlugin />}
               {!isReadOnly && <InlineImagePlugin />}
               {!isReadOnly && <PageBreakPlugin />}

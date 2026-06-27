@@ -253,51 +253,72 @@ const ImageResizer = ({
     }
   };
   return (
-    <div ref={controlWrapperRef}>
+    // Overlay that exactly covers the image container (position:relative parent).
+    // pointer-events:none lets clicks pass through to the image; each handle
+    // re-enables pointer-events so drag-resize still works.
+    <div
+      ref={controlWrapperRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        pointerEvents: 'none',
+      }}
+    >
       <div
         className="image-resizer image-resizer-n"
+        style={{ pointerEvents: 'auto' }}
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.north);
         }}
       />
       <div
         className="image-resizer image-resizer-ne"
+        style={{ pointerEvents: 'auto' }}
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.north | Direction.east);
         }}
       />
       <div
         className="image-resizer image-resizer-e"
+        style={{ pointerEvents: 'auto' }}
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.east);
         }}
       />
       <div
         className="image-resizer image-resizer-se"
+        style={{ pointerEvents: 'auto' }}
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.south | Direction.east);
         }}
       />
       <div
         className="image-resizer image-resizer-s"
+        style={{ pointerEvents: 'auto' }}
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.south);
         }}
       />
       <div
         className="image-resizer image-resizer-sw"
+        style={{ pointerEvents: 'auto' }}
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.south | Direction.west);
         }}
       />
       <div
         className="image-resizer image-resizer-w"
+        style={{ pointerEvents: 'auto' }}
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.west);
         }}
       />
       <div
         className="image-resizer image-resizer-nw"
+        style={{ pointerEvents: 'auto' }}
         onPointerDown={(event) => {
           handlePointerDown(event, Direction.north | Direction.west);
         }}

@@ -98,6 +98,14 @@ export type ContentEditorRef = {
   /** Whether the editor currently has input focus. */
   isFocused: () => boolean;
   /**
+   * Display one or more error messages inside the editor immediately.
+   * These are shown alongside any prop-based `errors`.
+   * Example: ref.current.setErrors(['Attachment too large', 'Subject is required'])
+   */
+  setErrors: (messages: string[]) => void;
+  /** Remove all errors that were set via `setErrors`. */
+  clearErrors: () => void;
+  /**
    * Access the underlying Lexical editor instance for advanced usage.
    * Returned type is `any` to avoid leaking internal Lexical types.
    */
@@ -253,18 +261,65 @@ export interface ContentEditorProps {
   // ── Floating toolbar ───────────────────────────────────────────────────────
   /** When true, shows the floating formatting toolbar near text selections. */
   showFloatingToolbar?: boolean;
-  /**
-   * Maximum word count allowed. When set, a live counter is shown
-   * below the editor. Exceeding the limit turns the counter red.
-   * Example: wordLimit={500}
-   */
+  // ── Word / character limits ────────────────────────────────────────────────
+  /** Maximum words allowed. Shows a live counter; turns red when exceeded. */
   wordLimit?: number;
+  /** Minimum words required. Error shown after blur if not met. */
+  minWords?: number;
+  /** Maximum characters allowed. Error shown when exceeded. */
+  maxChars?: number;
+  /** Minimum characters required. Error shown after blur if not met. */
+  minChars?: number;
 
+  // ── Required ───────────────────────────────────────────────────────────────
+  /** When true, shows a required-field error after blur if the editor is empty. */
+  required?: boolean;
+
+  // ── Callbacks ─────────────────────────────────────────────────────────────
   /**
    * Fires when the content crosses the configured word limit boundary.
-   *
-   * - exceeded: true  -> user just exceeded the limit
-   * - exceeded: false -> user came back within the limit
+   * exceeded: true → user just exceeded; false → came back within limit.
    */
   onWordLimitExceeded?: (info: { wordCount: number; wordLimit: number; exceeded: boolean }) => void;
+
+  // ── External errors ────────────────────────────────────────────────────────
+  /**
+   * Extra error messages to display (on top of any built-in validation).
+   * Use this for errors that originate outside the editor (e.g. file too large,
+   * subject empty, API failure).
+   *
+   * Example: errors={['Attachment exceeds 5 MB', 'Subject is required']}
+   */
+  errors?: string[];
+
+  // ── Custom error messages ──────────────────────────────────────────────────
+  /**
+   * Override the text of any built-in validation message.
+   * Every key accepts a plain string OR a function receiving the live counts.
+   *
+   * Covered errors:
+   * - wordLimitExceeded  — fires when wordCount > wordLimit
+   * - required           — fires on blur when editor is empty and required=true
+   * - minWords           — fires on blur when wordCount < minWords
+   * - maxCharsExceeded   — fires when charCount > maxChars
+   * - minCharsRequired   — fires on blur when charCount < minChars
+   *
+   * Example:
+   * ```tsx
+   * errorMessages={{
+   *   wordLimitExceeded: (count, limit) => `Too long — ${count}/${limit} words used.`,
+   *   required: 'Email body cannot be empty.',
+   *   minWords: (count, min) => `Write at least ${min} words (${count} so far).`,
+   *   maxCharsExceeded: (count, max) => `${count}/${max} characters — please shorten.`,
+   *   minCharsRequired: (count, min) => `At least ${min} characters needed (${count} entered).`,
+   * }}
+   * ```
+   */
+  errorMessages?: {
+    wordLimitExceeded?: string | ((wordCount: number, wordLimit: number) => string);
+    required?: string;
+    minWords?: string | ((wordCount: number, minWords: number) => string);
+    maxCharsExceeded?: string | ((charCount: number, maxChars: number) => string);
+    minCharsRequired?: string | ((charCount: number, minChars: number) => string);
+  };
 }

@@ -80,21 +80,27 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
           <Field label='Rows' orientation='horizontal' size='small'>
             <Input
               autoFocus={!disabled}
+              type='number'
+              min={1}
               value={rows}
               placeholder='Rows'
               appearance='underline'
               disabled={disabled}
-              onChange={(_, v) => setRows(v.value)}
+              input={{ style: { textAlign: 'left' } }}
+              onChange={(_, v) => setRows(v.value.replace(/\D/g, ''))}
             />
           </Field>
 
           <Field label='Columns' orientation='horizontal' size='small'>
             <Input
+              type='number'
+              min={1}
               value={columns}
               placeholder='Columns'
               appearance='underline'
               disabled={disabled}
-              onChange={(_, v) => setColumns(v.value)}
+              input={{ style: { textAlign: 'left' } }}
+              onChange={(_, v) => setColumns(v.value.replace(/\D/g, ''))}
             />
           </Field>
 

@@ -50,7 +50,15 @@ export const ColorPickerPlugin = ({ disabled }: { disabled: boolean }) => {
   const applyStyle = (args: { property: 'background-color' | 'color'; color: string }) => {
     if (disabled) return;
 
-    editor.focus();
+    // Only refocus the editor if it currently owns focus or had a saved selection
+    // (i.e., the user was working in the editor). This prevents the color picker
+    // from stealing focus from other fields (e.g. To/CC/BCC in email forms).
+    const root = editor.getRootElement();
+    const editorIsActive =
+      !!lastRangeSelectionRef.current &&
+      !!root &&
+      (document.activeElement === root || root.contains(document.activeElement as Node));
+    if (editorIsActive) editor.focus();
 
     editor.update(() => {
       const saved = lastRangeSelectionRef.current;

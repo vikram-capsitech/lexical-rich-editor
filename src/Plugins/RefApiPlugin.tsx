@@ -9,10 +9,12 @@ export default function RefApiPlugin({
   forwardedRef,
   contentEditableDomRef,
   focusedRef,
+  setRefErrors,
 }: {
   forwardedRef: React.Ref<ContentEditorRef>;
   contentEditableDomRef: React.RefObject<HTMLDivElement>;
   focusedRef: React.MutableRefObject<boolean>;
+  setRefErrors: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   const [editor] = useLexicalComposerContext();
 
@@ -58,13 +60,15 @@ export default function RefApiPlugin({
 
         isFocused: () => focusedRef.current,
         getEditor: () => editor,
+        setErrors: (messages: string[]) => setRefErrors(messages),
+        clearErrors: () => setRefErrors([]),
 
         // Generic blocks (signature, footer, banner, etc.)
         upsertBlock: (spec: BlockSpec) => upsertBlock(editor, spec),
         removeBlock: (kind: string) => removeBlock(editor, kind),
         hasBlock: (kind: string) => hasBlock(editor, kind),
       }) as any,
-    [editor, contentEditableDomRef, focusedRef],
+    [editor, contentEditableDomRef, focusedRef, setRefErrors],
   );
 
   return null;

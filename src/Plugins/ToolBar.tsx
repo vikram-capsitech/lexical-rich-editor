@@ -1,8 +1,13 @@
 import { Stack, useTheme } from '@fluentui/react';
-import { Button, Dropdown, makeStyles, Option, ToolbarDivider } from '@fluentui/react-components';
+import {
+  Button,
+  Dropdown,
+  makeStyles,
+  Option,
+  ToolbarDivider,
+} from '@fluentui/react-components';
 import {
   CommentQuoteRegular,
-  DeleteRegular,
   DocumentPageBreakRegular,
   HighlightAccentFilled,
   TextAlignCenterFilled,
@@ -38,14 +43,16 @@ import {
 import { $setBlocksType } from '@lexical/selection';
 import { $getNearestNodeOfType, mergeRegister } from '@lexical/utils';
 import {
-  $getNodeByKey,
+  $createParagraphNode,
   $getSelection,
   $isRangeSelection,
+  $setSelection,
   FORMAT_ELEMENT_COMMAND,
   FORMAT_TEXT_COMMAND,
   REDO_COMMAND,
   SELECTION_CHANGE_COMMAND,
   UNDO_COMMAND,
+  type RangeSelection,
 } from 'lexical';
 import React, { useMemo, useState } from 'react';
 import {
@@ -128,7 +135,7 @@ function sanitizePluginGroups(groups?: string[][]): ToolbarToken[][] {
     .map((g) =>
       (g || [])
         .map((t) => t.trim())
-        .filter((t): t is ToolbarToken => (ALLOWED_TOKENS as any)[t] === true),
+        .filter((t): t is ToolbarToken => (ALLOWED_TOKENS as any)[t] === true)
     )
     .filter((g) => g.length > 0);
 }
@@ -152,8 +159,7 @@ export const ToolBarPlugins = (props: IEditorProps) => {
   const [isLowercase, setIsLowercase] = useState(false);
   const [isCapitalize, setIsCapitalize] = useState(false);
   const [alignment, setAlignment] = useState<string>('left');
-  const [isInTable, setIsInTable] = useState(false);
-  const [tableNodeKey, setTableNodeKey] = useState<string | null>(null);
+  const lastSelectionRef = React.useRef<RangeSelection | null>(null);
 
   const presetGroups = getToolbarGroupsByLevel(props.level);
 
@@ -175,8 +181,6 @@ export const ToolBarPlugins = (props: IEditorProps) => {
       setIsLowercase(false);
       setIsCapitalize(false);
       setSelectNodeType('paragraph');
-      setIsInTable(false);
-      setTableNodeKey(null);
       return;
     }
 
@@ -196,25 +200,8 @@ export const ToolBarPlugins = (props: IEditorProps) => {
     // root selection -> paragraph
     if (anchorNode.getKey() === 'root') {
       setSelectNodeType('paragraph');
-      setIsInTable(false);
-      setTableNodeKey(null);
       return;
     }
-
-    // ── Detect table ancestry by walking up the node tree ───────────────────
-    // TableNode is a Lexical shadow root, so getTopLevelElementOrThrow()
-    // returns the cell paragraph — we must climb ancestors to find the table.
-    let tableAncestorKey: string | null = null;
-    let cursor = anchorNode.getParent();
-    while (cursor !== null) {
-      if (cursor.getType() === 'table') {
-        tableAncestorKey = cursor.getKey();
-        break;
-      }
-      cursor = cursor.getParent();
-    }
-    setIsInTable(tableAncestorKey !== null);
-    setTableNodeKey(tableAncestorKey);
 
     // element = the cell-level block (paragraph / heading inside the cell),
     // or the top-level block when not in a table — correct for all toolbar state.
@@ -245,17 +232,28 @@ export const ToolBarPlugins = (props: IEditorProps) => {
         ? type
         : 'paragraph',
     );
+
   };
 
+  // Restores the last saved cursor/selection before applying any block-level
+  // transform. Without this, clicking a toolbar dropdown loses the selection
+  // and the transform applies to the wrong block (or the whole document).
+  const applyToBlock = React.useCallback(
+    (fn: (sel: RangeSelection) => void) => {
+      editor.update(() => {
+        const saved = lastSelectionRef.current;
+        if (saved) $setSelection(saved.clone());
+        const sel = $getSelection();
+        if ($isRangeSelection(sel)) fn(sel);
+      });
+    },
+    [editor],
+  );
+
   const formatQuote = () => {
-    editor.update(() => {
-      const selection = $getSelection();
-
-      if (!$isRangeSelection(selection)) return;
-
+    applyToBlock((selection) => {
       if (selectNodeType === 'quote') {
-        // toggle back to paragraph
-        formatParagraph(editor);
+        $setBlocksType(selection, () => $createParagraphNode());
       } else {
         $setBlocksType(selection, () => $createQuoteNode());
       }
@@ -275,11 +273,13 @@ export const ToolBarPlugins = (props: IEditorProps) => {
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
+          const sel = $getSelection();
+          if ($isRangeSelection(sel)) lastSelectionRef.current = sel.clone();
           updateToolbarPlugins();
           return false;
         },
-        LOW_PRIORIRTY,
-      ),
+        LOW_PRIORIRTY
+      )
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
@@ -308,16 +308,16 @@ export const ToolBarPlugins = (props: IEditorProps) => {
         editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'highlight');
         break;
       case RichTextPluginsType.LeftAlign:
-        editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'left');
+        applyToBlock((sel) => { const seen = new Set<string>(); sel.getNodes().forEach(n => { const t = n.getTopLevelElementOrThrow(); if (!seen.has(t.getKey())) { seen.add(t.getKey()); (t as any).setFormat('left'); } }); });
         break;
       case RichTextPluginsType.RightAlign:
-        editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'right');
+        applyToBlock((sel) => { const seen = new Set<string>(); sel.getNodes().forEach(n => { const t = n.getTopLevelElementOrThrow(); if (!seen.has(t.getKey())) { seen.add(t.getKey()); (t as any).setFormat('right'); } }); });
         break;
       case RichTextPluginsType.CenterAlign:
-        editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'center');
+        applyToBlock((sel) => { const seen = new Set<string>(); sel.getNodes().forEach(n => { const t = n.getTopLevelElementOrThrow(); if (!seen.has(t.getKey())) { seen.add(t.getKey()); (t as any).setFormat('center'); } }); });
         break;
       case RichTextPluginsType.JustifyAlign:
-        editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'justify');
+        applyToBlock((sel) => { const seen = new Set<string>(); sel.getNodes().forEach(n => { const t = n.getTopLevelElementOrThrow(); if (!seen.has(t.getKey())) { seen.add(t.getKey()); (t as any).setFormat('justify'); } }); });
         break;
       case RichTextPluginsType.Undo:
         editor.dispatchCommand(UNDO_COMMAND, undefined);
@@ -338,15 +338,8 @@ export const ToolBarPlugins = (props: IEditorProps) => {
   };
 
   const updateHeading = (heading: HeadingTagType) => {
-    editor.update(() => {
-      const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
-        $setBlocksType(selection, () => $createHeadingNode(heading));
-      }
-    });
-
-    editor.getEditorState().read(() => {
-      updateToolbarPlugins();
+    applyToBlock((selection) => {
+      $setBlocksType(selection, () => $createHeadingNode(heading));
     });
   };
 
@@ -517,7 +510,7 @@ export const ToolBarPlugins = (props: IEditorProps) => {
               if (!val) return;
 
               if (val === 'paragraph') {
-                formatParagraph(editor);
+                applyToBlock((sel) => $setBlocksType(sel, () => $createParagraphNode()));
                 setSelectNodeType('paragraph');
               } else {
                 updateHeading(val);
@@ -559,24 +552,16 @@ export const ToolBarPlugins = (props: IEditorProps) => {
         ];
 
         const DECORATOR_LABEL: Record<string, string> = {
-          uppercase: 'Uppercase',
-          lowercase: 'Lowercase',
-          capitalize: 'Capitalize',
-          strike: 'Strikethrough',
-          subscript: 'Subscript',
-          superscript: 'Superscript',
-          highlight: 'Highlight',
-          'ul-list': 'Bullet list',
-          'ol-list': 'Number list',
+          uppercase: 'Uppercase', lowercase: 'Lowercase', capitalize: 'Capitalize',
+          strike: 'Strikethrough', subscript: 'Subscript', superscript: 'Superscript',
+          highlight: 'Highlight', 'ul-list': 'Bullet list', 'ol-list': 'Number list',
           quote: 'Quote',
         };
 
         const decoratorValue =
-          activeDecorators.length === 0
-            ? ''
-            : activeDecorators.length === 1
-              ? DECORATOR_LABEL[activeDecorators[0]]
-              : `${DECORATOR_LABEL[activeDecorators[0]]} +${activeDecorators.length - 1}`;
+          activeDecorators.length === 0 ? '' :
+          activeDecorators.length === 1 ? DECORATOR_LABEL[activeDecorators[0]] :
+          `${DECORATOR_LABEL[activeDecorators[0]]} +${activeDecorators.length - 1}`;
 
         return (
           <Dropdown
@@ -593,92 +578,55 @@ export const ToolBarPlugins = (props: IEditorProps) => {
             listbox={{ style: { minInlineSize: '180px' } }}
             onOptionSelect={(_, data) => {
               switch (data.optionValue as string) {
-                case 'uppercase':
-                  editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'uppercase');
-                  break;
-                case 'lowercase':
-                  onHandleSelectOption(RichTextPluginsType.Lowercase);
-                  break;
-                case 'capitalize':
-                  onHandleSelectOption(RichTextPluginsType.Capitalize);
-                  break;
-                case 'strike':
-                  onHandleSelectOption(RichTextPluginsType.Strikethrough);
-                  break;
-                case 'subscript':
-                  onHandleSelectOption(RichTextPluginsType.Subscript);
-                  break;
-                case 'superscript':
-                  onHandleSelectOption(RichTextPluginsType.Superscript);
-                  break;
-                case 'highlight':
-                  onHandleSelectOption(RichTextPluginsType.Highlight);
-                  break;
+                case 'uppercase':  editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'uppercase'); break;
+                case 'lowercase':  onHandleSelectOption(RichTextPluginsType.Lowercase); break;
+                case 'capitalize': onHandleSelectOption(RichTextPluginsType.Capitalize); break;
+                case 'strike':     onHandleSelectOption(RichTextPluginsType.Strikethrough); break;
+                case 'subscript':  onHandleSelectOption(RichTextPluginsType.Subscript); break;
+                case 'superscript': onHandleSelectOption(RichTextPluginsType.Superscript); break;
+                case 'highlight':  onHandleSelectOption(RichTextPluginsType.Highlight); break;
                 case 'ul-list':
-                  editor.dispatchCommand(
-                    selectNodeType === 'ul' ? REMOVE_LIST_COMMAND : INSERT_UNORDERED_LIST_COMMAND,
-                    undefined,
-                  );
+                  editor.dispatchCommand(selectNodeType === 'ul' ? REMOVE_LIST_COMMAND : INSERT_UNORDERED_LIST_COMMAND, undefined);
                   break;
                 case 'ol-list':
-                  editor.dispatchCommand(
-                    selectNodeType === 'ol' ? REMOVE_LIST_COMMAND : INSERT_ORDERED_LIST_COMMAND,
-                    undefined,
-                  );
+                  editor.dispatchCommand(selectNodeType === 'ol' ? REMOVE_LIST_COMMAND : INSERT_ORDERED_LIST_COMMAND, undefined);
                   break;
-                case 'page-break':
-                  editor.dispatchCommand(INSERT_PAGE_BREAK, undefined);
-                  break;
-                case 'quote':
-                  formatQuote();
-                  break;
+                case 'page-break': editor.dispatchCommand(INSERT_PAGE_BREAK, undefined); break;
+                case 'quote':      formatQuote(); break;
               }
             }}>
             <Option value='uppercase' text='Uppercase'>
-              <TextCaseUppercaseFilled style={optionIconStyle} />
-              Uppercase
+              <TextCaseUppercaseFilled style={optionIconStyle} />Uppercase
             </Option>
             <Option value='lowercase' text='Lowercase'>
-              <TextCaseLowercaseFilled style={optionIconStyle} />
-              Lowercase
+              <TextCaseLowercaseFilled style={optionIconStyle} />Lowercase
             </Option>
             <Option value='capitalize' text='Capitalize'>
-              <TextCaseTitleFilled style={optionIconStyle} />
-              Capitalize
+              <TextCaseTitleFilled style={optionIconStyle} />Capitalize
             </Option>
             <Option value='strike' text='Strikethrough'>
-              <TextStrikethroughFilled style={optionIconStyle} />
-              Strikethrough
+              <TextStrikethroughFilled style={optionIconStyle} />Strikethrough
             </Option>
             <Option value='subscript' text='Subscript'>
-              <TextSubscriptFilled style={optionIconStyle} />
-              Subscript
+              <TextSubscriptFilled style={optionIconStyle} />Subscript
             </Option>
             <Option value='superscript' text='Superscript'>
-              <TextSuperscriptFilled style={optionIconStyle} />
-              Superscript
+              <TextSuperscriptFilled style={optionIconStyle} />Superscript
             </Option>
             <Option value='highlight' text='Highlight'>
-              <HighlightAccentFilled
-                style={{ ...optionIconStyle, color: isEditable ? brand : fgDisabled }}
-              />
-              Highlight
+              <HighlightAccentFilled style={{ ...optionIconStyle, color: isEditable ? brand : fgDisabled }} />Highlight
             </Option>
             <Option value='ul-list' text='Bullet list'>
-              <TextBulletListLtrFilled style={optionIconStyle} />
-              Bullet list
+              <TextBulletListLtrFilled style={optionIconStyle} />Bullet list
             </Option>
             <Option value='ol-list' text='Number list'>
-              <TextNumberListLtrFilled style={optionIconStyle} />
-              Number list
+              <TextNumberListLtrFilled style={optionIconStyle} />Number list
             </Option>
             <Option value='page-break' text='Page Break'>
-              <DocumentPageBreakRegular style={optionIconStyle} />
-              Page break
+              <DocumentPageBreakRegular style={optionIconStyle} />Page break
             </Option>
             <Option value='quote' text='Quote'>
-              <CommentQuoteRegular style={optionIconStyle} />
-              Quote
+              <CommentQuoteRegular style={optionIconStyle} />Quote
             </Option>
           </Dropdown>
         );
@@ -697,30 +645,10 @@ export const ToolBarPlugins = (props: IEditorProps) => {
 
       case 'Align': {
         const ALIGN_OPTIONS = [
-          {
-            value: 'left',
-            label: 'Left Align',
-            icon: <TextAlignLeftFilled style={optionIconStyle} />,
-            action: RichTextPluginsType.LeftAlign,
-          },
-          {
-            value: 'center',
-            label: 'Center Align',
-            icon: <TextAlignCenterFilled style={optionIconStyle} />,
-            action: RichTextPluginsType.CenterAlign,
-          },
-          {
-            value: 'right',
-            label: 'Right Align',
-            icon: <TextAlignRightFilled style={optionIconStyle} />,
-            action: RichTextPluginsType.RightAlign,
-          },
-          {
-            value: 'justify',
-            label: 'Justify Align',
-            icon: <TextAlignJustifyFilled style={optionIconStyle} />,
-            action: RichTextPluginsType.JustifyAlign,
-          },
+          { value: 'left',    label: 'Left Align',    icon: <TextAlignLeftFilled style={optionIconStyle} />,    action: RichTextPluginsType.LeftAlign },
+          { value: 'center',  label: 'Center Align',  icon: <TextAlignCenterFilled style={optionIconStyle} />,  action: RichTextPluginsType.CenterAlign },
+          { value: 'right',   label: 'Right Align',   icon: <TextAlignRightFilled style={optionIconStyle} />,   action: RichTextPluginsType.RightAlign },
+          { value: 'justify', label: 'Justify Align', icon: <TextAlignJustifyFilled style={optionIconStyle} />, action: RichTextPluginsType.JustifyAlign },
         ];
         const alignLabel = ALIGN_OPTIONS.find((o) => o.value === alignment)?.label ?? 'Left Align';
 
@@ -786,38 +714,6 @@ export const ToolBarPlugins = (props: IEditorProps) => {
         ))}
       </div>
 
-      {isInTable && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '2px 8px',
-            borderBottom: '1px solid #ccced1',
-            background: '#fff8f8',
-          }}>
-          <span style={{ fontSize: 12, color: '#888', userSelect: 'none' }}>Table</span>
-          <Button
-            size='small'
-            icon={<DeleteRegular style={{ color: '#c4272c' }} />}
-            title='Delete table'
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#c4272c',
-              fontWeight: 500,
-            }}
-            onClick={() => {
-              editor.update(() => {
-                if (!tableNodeKey) return;
-                const node = $getNodeByKey(tableNodeKey);
-                if (node?.getType() === 'table') node.remove();
-              });
-            }}>
-            Delete Table
-          </Button>
-        </div>
-      )}
     </Stack>
   );
 };
