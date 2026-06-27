@@ -105,12 +105,17 @@ const hsvToRgb = (h: number, s: number, v: number) => {
   };
 };
 
-function useDrag(onMove: (clientX: number, clientY: number) => void, onEnd?: () => void) {
+function useDrag(
+  onMove: (clientX: number, clientY: number) => void,
+  onEnd?: () => void,
+  interactingRef?: React.MutableRefObject<boolean>,
+) {
   const draggingRef = React.useRef(false);
 
   const start = React.useCallback(
     (e: React.MouseEvent) => {
       draggingRef.current = true;
+      if (interactingRef) interactingRef.current = true;
       onMove(e.clientX, e.clientY);
 
       const move = (ev: MouseEvent) => {
@@ -121,13 +126,32 @@ function useDrag(onMove: (clientX: number, clientY: number) => void, onEnd?: () 
         draggingRef.current = false;
         window.removeEventListener('mousemove', move);
         window.removeEventListener('mouseup', up);
+        // Releasing the drag (or even a plain click with no movement) outside
+        // the picker's small hit area fires a native click there too — the
+        // Callout's dismiss check runs on a *capture*-phase document listener,
+        // which always completes before any *bubble*-phase listener on
+        // `window` runs. So clearing the flag from a one-off bubble listener
+        // here guarantees it's still true while the Callout makes its
+        // decision, however long the gap between mouseup and click actually
+        // is — no timer-based race.
+        if (interactingRef) {
+          const clearFlag = () => {
+            interactingRef.current = false;
+          };
+          window.addEventListener('click', clearFlag, { once: true });
+          // Fallback in case no click event follows this mouseup at all.
+          setTimeout(() => {
+            window.removeEventListener('click', clearFlag);
+            interactingRef.current = false;
+          }, 0);
+        }
         onEnd?.();
       };
 
       window.addEventListener('mousemove', move);
       window.addEventListener('mouseup', up);
     },
-    [onMove, onEnd],
+    [onMove, onEnd, interactingRef],
   );
 
   return start;
@@ -136,6 +160,55 @@ function useDrag(onMove: (clientX: number, clientY: number) => void, onEnd?: () 
 export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: Props) => {
   const [open, setOpen] = React.useState(false);
   const btnRef = React.useRef<HTMLDivElement | null>(null);
+  // Tracks whether the user is actively dragging/typing inside the callout so
+  // Fluent's auto-dismiss (on scroll/resize/focus-shift/stray click) can be
+  // suppressed — the callout should only close via Apply/Close or a genuine
+  // click outside it.
+  const interactingRef = React.useRef(false);
+
+  // Memoized so Callout's internal dismiss-listener effect (which depends on
+  // these by reference) doesn't tear down and re-attach its document
+  // listeners on every render — that churn left windows where an outside
+  // click could be missed (or the callout dismissed unpredictably) while
+  // hue/sv state was updating continuously during a drag.
+  const handleDismiss = React.useCallback(() => setOpen(false), []);
+  const preventDismissOnEvent = React.useCallback(
+    (ev: Event | React.FocusEvent | React.KeyboardEvent | React.MouseEvent) => {
+      // Block every auto-dismiss trigger (scroll/resize/focus-shift) except a
+      // genuine click; while a drag is in progress, block that too, since
+      // releasing it outside the small swatch/slider hit area would
+      // otherwise read as an outside click.
+      if (interactingRef.current) return true;
+      return ev.type !== 'click';
+    },
+    [],
+  );
+
+  // Since scroll/resize no longer auto-close the callout, it must instead
+  // actively follow the button as the page scrolls. Fluent recalculates the
+  // Callout's position on every render of this component (its internal
+  // effect depends on the whole `props` object, which is a new reference
+  // each render), so forcing a re-render on scroll/resize is enough to keep
+  // it correctly anchored — no manual position math needed.
+  const [, forceReposition] = React.useState(0);
+  React.useEffect(() => {
+    if (!open) return;
+    let rafId: number | null = null;
+    const reposition = () => {
+      if (rafId != null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        forceReposition((n) => n + 1);
+      });
+    };
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    return () => {
+      if (rafId != null) cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', reposition, true);
+      window.removeEventListener('resize', reposition);
+    };
+  }, [open]);
 
   const [hex, setHex] = React.useState<string>(normalizeHex(value || '#000000'));
 
@@ -182,7 +255,7 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
     },
     [h, commitHsv],
   );
-  const startSV = useDrag(onSVMove);
+  const startSV = useDrag(onSVMove, undefined, interactingRef);
 
   const hueRef = React.useRef<HTMLDivElement | null>(null);
   const onHueMove = React.useCallback(
@@ -196,7 +269,7 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
     },
     [s, v, commitHsv],
   );
-  const startHue = useDrag((x) => onHueMove(x));
+  const startHue = useDrag((x) => onHueMove(x), undefined, interactingRef);
 
   const svThumb = React.useMemo(() => ({ left: `${s * 100}%`, top: `${(1 - v) * 100}%` }), [s, v]);
   const hueThumb = React.useMemo(() => ({ left: `${(h / 360) * 100}%` }), [h]);
@@ -243,10 +316,11 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
       {open && !disabled && (
         <Callout
           target={btnRef}
-          onDismiss={() => setOpen(false)}
+          onDismiss={handleDismiss}
           setInitialFocus
           directionalHint={4}
-          className='aoColorCallout'>
+          className='aoColorCallout'
+          preventDismissOnEvent={preventDismissOnEvent}>
           <Stack tokens={{ childrenGap: 10 }} styles={{ root: { padding: 12, width: 320 } }}>
             <div className='aoLexRow'>
               <div className='aoLexSwatch' style={{ background: hex }} />

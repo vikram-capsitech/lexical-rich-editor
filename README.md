@@ -5,9 +5,9 @@ A production-ready, feature-rich **rich text editor** built on Meta's [Lexical](
 ## Install
 
 ```bash
-yarn add lexical-rich-editor
+yarn add @tarviks/lexical-rich-editor
 # or
-npm install lexical-rich-editor
+npm install @tarviks/lexical-rich-editor
 ```
 
 ### Peer dependencies
@@ -28,7 +28,7 @@ import {
   ContentEditorComponent,
   ContentEditorLevel,
   ContentEditorRef,
-} from 'lexical-rich-editor';
+} from '@tarviks/lexical-rich-editor';
 
 function MyEditor() {
   const [value, setValue] = useState('');
