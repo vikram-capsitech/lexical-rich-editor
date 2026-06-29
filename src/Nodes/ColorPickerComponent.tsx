@@ -36,10 +36,22 @@ const PRESET = [
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
 const normalizeHex = (v: string) => {
-  let s = (v ?? '').trim();
+  const s = (v ?? '').trim();
   if (!s) return '#000000';
-  if (!s.startsWith('#')) s = `#${s}`;
-  if (s.length === 4 || s.length === 7) return s;
+
+  // Selection style values aren't guaranteed to be hex — content pasted or
+  // authored elsewhere (other editors, email clients) commonly carries
+  // `rgb()`/`rgba()` inline colors. Without this, such a value would silently
+  // fall through to the '#000000' default below, showing the wrong color.
+  const rgbMatch = s.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*[\d.]+\s*)?\)$/i);
+  if (rgbMatch) {
+    const [, r, g, b] = rgbMatch;
+    return rgbToHex(clamp(+r, 0, 255), clamp(+g, 0, 255), clamp(+b, 0, 255));
+  }
+
+  let hex = s.startsWith('#') ? s : `#${s}`;
+  if (hex.length === 9) hex = hex.slice(0, 7); // #rrggbbaa — drop alpha, picker has no alpha control
+  if (hex.length === 4 || hex.length === 7) return hex.toLowerCase();
   return '#000000';
 };
 
@@ -295,6 +307,7 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
   return (
     <div ref={btnRef} style={{ position: 'relative', display: 'inline-block' }}>
       <Button
+        type='button'
         size='small'
         icon={icon}
         value={title}
@@ -394,12 +407,13 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
 
             <div className='aoLexActions'>
               <DefaultButton
+                type='button'
                 text='Apply'
                 onClick={() => {
                   commitHsv(h, s, v, true);
                 }}
               />
-              <DefaultButton text='Close' onClick={() => setOpen(false)} />
+              <DefaultButton type='button' text='Close' onClick={() => setOpen(false)} />
             </div>
           </Stack>
         </Callout>

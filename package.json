@@ -1,6 +1,6 @@
 {
   "name": "@tarviks/lexical-rich-editor",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A feature-rich Lexical-based rich text editor with autocomplete, spell check, tables, images, and more.",
   "keywords": [
     "lexical",
@@ -45,6 +45,7 @@
     "build:watch": "tsup --watch",
     "dev": "cd example && yarn dev",
     "lint": "tsc --noEmit",
+    "test:e2e": "playwright test",
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
@@ -75,6 +76,8 @@
     "@lexical/selection": "^0.44.0",
     "@lexical/table": "^0.44.0",
     "@lexical/utils": "^0.44.0",
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^26.0.1",
     "@types/react": "^18.3.7",
     "@types/react-dom": "^18.3.0",
     "lexical": "^0.44.0",

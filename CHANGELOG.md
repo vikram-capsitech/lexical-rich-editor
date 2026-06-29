@@ -2,6 +2,15 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.0.8] — 2026-06-29
+
+### Fixed
+- Color picker no longer defaults to black when the current selection's existing color is in `rgb()`/`rgba()` format or `#rrggbbaa` — only literal `#rgb`/`#rrggbb` hex was previously recognized, silently falling back to `#000000` for anything else.
+- Color picker's trigger button and Apply/Close buttons now set `type="button"` explicitly, removing a dependency on Fluent UI's default in case the picker is ever used inside a host `<form>`.
+
+### Added
+- Playwright integration suite covering text/background color application (preset and custom), picker reopen behavior, parent re-render survival, no accidental form submission, final HTML output, and unrelated-text isolation.
+
 ## [1.0.7] — 2026-06-29
 
 ### Fixed
