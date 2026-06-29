@@ -2,6 +2,11 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.0.7] — 2026-06-29
+
+### Fixed
+- Color picker callout no longer resets to the default color when releasing a drag on the saturation/value or hue sliders. The picker was continuously re-syncing its local color from the host's `value` prop while open, so a momentarily stale/incorrect echo from the host's selection-based color readback (most visible right as focus shifts from the editor into the callout) could overwrite the in-progress selection the instant the mouse was released. It now only seeds from `value` when the popover transitions from closed to open.
+
 ## [1.0.3] — 2026-05-15
 
 ### Changed

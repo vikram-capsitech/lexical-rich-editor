@@ -219,7 +219,20 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
   const [s, setS] = React.useState(hsv.s);
   const [v, setV] = React.useState(hsv.v);
 
+  // Re-seed local color state from `value` only when the popover freshly
+  // opens. Every drag move/preset click/hex edit round-trips through
+  // `onChange` -> host applies it -> host echoes back a new `value`, and if
+  // we resynced on every such echo, a momentarily-stale or default echo
+  // (e.g. the host's selection-based color readback racing with focus
+  // moving into the callout) would stomp the in-progress local state right
+  // as the user releases the mouse. Local state is already authoritative
+  // once the user starts interacting, so there's no need to keep syncing
+  // from upstream while open — only when this open session begins.
+  const wasOpenRef = React.useRef(open);
   React.useEffect(() => {
+    const justOpened = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+    if (!justOpened) return;
     const n = normalizeHex(value || '#000000');
     setHex(n);
     const rgb = hexToRgb(n);
@@ -227,7 +240,7 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
     setH(next.h);
     setS(next.s);
     setV(next.v);
-  }, [value]);
+  }, [value, open]);
 
   const commitHsv = React.useCallback(
     (hh: number, ss: number, vv: number, close?: boolean) => {
