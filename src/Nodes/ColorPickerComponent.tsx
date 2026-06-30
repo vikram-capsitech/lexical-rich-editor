@@ -241,11 +241,25 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
   // once the user starts interacting, so there's no need to keep syncing
   // from upstream while open — only when this open session begins.
   const wasOpenRef = React.useRef(open);
+  // eslint-disable-next-line no-console
+  console.log('[AO-ColorPicker]', title, 'render with incoming value prop:', JSON.stringify(value));
+
   React.useEffect(() => {
     const justOpened = open && !wasOpenRef.current;
     wasOpenRef.current = open;
+    // eslint-disable-next-line no-console
+    console.log('[AO-ColorPicker]', title, 'open-seed effect', {
+      open,
+      justOpened,
+      incomingValue: value,
+    });
     if (!justOpened) return;
     const n = normalizeHex(value || '#000000');
+    // eslint-disable-next-line no-console
+    console.log('[AO-ColorPicker]', title, 'seeding local state from value on open', {
+      incomingValue: value,
+      normalized: n,
+    });
     setHex(n);
     const rgb = hexToRgb(n);
     const next = rgbToHsv(rgb.r, rgb.g, rgb.b);
@@ -259,10 +273,12 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
       const rgb = hsvToRgb(hh, ss, vv);
       const nextHex = rgbToHex(rgb.r, rgb.g, rgb.b);
       setHex(nextHex);
+      // eslint-disable-next-line no-console
+      console.log('[AO-ColorPicker]', title, 'commitHsv -> onChange', { nextHex, close: !!close });
       onChange(nextHex);
       if (close) setOpen(false);
     },
-    [onChange],
+    [onChange, title],
   );
 
   const svRef = React.useRef<HTMLDivElement | null>(null);
@@ -321,6 +337,11 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
         }}
         onClick={() => {
           if (disabled) return;
+          // eslint-disable-next-line no-console
+          console.log('[AO-ColorPicker]', title, 'trigger button clicked', {
+            wasOpen: open,
+            activeElementBeforeToggle: document.activeElement?.tagName,
+          });
           setOpen((p) => !p);
         }}
       />
@@ -366,6 +387,8 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
                   setH(next.h);
                   setS(next.s);
                   setV(next.v);
+                  // eslint-disable-next-line no-console
+                  console.log('[AO-ColorPicker]', title, 'hex field blur -> onChange', { raw: hex, normalized: n });
                   onChange(n);
                 }}
               />
@@ -385,6 +408,8 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
                     setH(next.h);
                     setS(next.s);
                     setV(next.v);
+                    // eslint-disable-next-line no-console
+                    console.log('[AO-ColorPicker]', title, 'preset swatch click -> onChange', { color: c });
                     onChange(c);
                   }}
                   title={c}

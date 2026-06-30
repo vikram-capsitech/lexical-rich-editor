@@ -22,11 +22,23 @@ export const ColorPickerPlugin = ({ disabled }: { disabled: boolean }) => {
 
   const updateToolbar = () => {
     const selection = $getSelection();
-    if ($isRangeSelection(selection)) {
-      lastRangeSelectionRef.current = selection.clone();
+    const isRange = $isRangeSelection(selection);
+    // eslint-disable-next-line no-console
+    console.log('[AO-ColorPicker] updateToolbar', {
+      isRangeSelection: isRange,
+      isCollapsed: isRange ? (selection as RangeSelection).isCollapsed() : null,
+    });
+    if (isRange) {
+      lastRangeSelectionRef.current = selection!.clone();
 
-      const c = $getSelectionStyleValueForProperty(selection, 'color', '#000000');
-      const bg = $getSelectionStyleValueForProperty(selection, 'background-color', '#ffffff');
+      const c = $getSelectionStyleValueForProperty(selection as RangeSelection, 'color', '#000000');
+      const bg = $getSelectionStyleValueForProperty(
+        selection as RangeSelection,
+        'background-color',
+        '#ffffff',
+      );
+      // eslint-disable-next-line no-console
+      console.log('[AO-ColorPicker] updateToolbar readback', { color: c, bgColor: bg });
       setColors({ color: c, bgColor: bg });
     }
   };
@@ -58,6 +70,20 @@ export const ColorPickerPlugin = ({ disabled }: { disabled: boolean }) => {
       !!lastRangeSelectionRef.current &&
       !!root &&
       (document.activeElement === root || root.contains(document.activeElement as Node));
+
+    // eslint-disable-next-line no-console
+    console.log('[AO-ColorPicker] applyStyle called', {
+      property: args.property,
+      color: args.color,
+      hasSavedSelection: !!lastRangeSelectionRef.current,
+      savedSelectionIsCollapsed: lastRangeSelectionRef.current?.isCollapsed() ?? null,
+      editorIsActive,
+      activeElementTag: document.activeElement?.tagName,
+      activeElementClass: (document.activeElement as HTMLElement | null)?.className,
+      rootIsActiveElement: document.activeElement === root,
+      rootContainsActiveElement: !!root && root.contains(document.activeElement as Node),
+    });
+
     if (editorIsActive) editor.focus();
 
     editor.update(() => {
@@ -67,9 +93,35 @@ export const ColorPickerPlugin = ({ disabled }: { disabled: boolean }) => {
       }
 
       const selection = $getSelection();
+      const isRange = $isRangeSelection(selection);
 
-      if ($isRangeSelection(selection)) {
-        $patchStyleText(selection, { [args.property]: args.color });
+      // eslint-disable-next-line no-console
+      console.log('[AO-ColorPicker] applyStyle inside editor.update', {
+        hadSavedSelection: !!saved,
+        selectionAfterRestoreIsRange: isRange,
+        selectionAfterRestoreIsCollapsed: isRange ? (selection as RangeSelection).isCollapsed() : null,
+      });
+
+      if (isRange) {
+        $patchStyleText(selection as RangeSelection, { [args.property]: args.color });
+
+        const verify = $getSelectionStyleValueForProperty(
+          selection as RangeSelection,
+          args.property,
+          '<none>',
+        );
+        // eslint-disable-next-line no-console
+        console.log('[AO-ColorPicker] applyStyle after patchStyleText, readback in same update', {
+          property: args.property,
+          appliedColor: args.color,
+          readBack: verify,
+        });
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn(
+          '[AO-ColorPicker] applyStyle: no range selection available — style was NOT applied',
+          { property: args.property, color: args.color },
+        );
       }
     });
   };

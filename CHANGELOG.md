@@ -2,6 +2,11 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.0.9] — 2026-06-30 (diagnostic build)
+
+### Added
+- Temporary `console.log`/`console.warn` instrumentation (prefixed `[AO-ColorPicker]`) across the color-application pipeline: incoming `value` prop changes, open-popover seeding, every commit path (drag, preset click, hex field blur), selection capture/restore in `applyStyle`, the readback in `updateToolbar`, and `FocusEventsPlugin`'s focusout/selection-clear handling. Intended to diagnose a color-picker issue reported as still present in a consuming web app after 1.0.7/1.0.8 — no behavior changes. **Should be reverted once diagnosis is complete.**
+
 ## [1.0.8] — 2026-06-29
 
 ### Fixed
