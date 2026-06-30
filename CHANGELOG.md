@@ -2,6 +2,12 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.0.10] — 2026-06-30
+
+### Fixed
+- Root-caused via diagnostic logging from a real consuming app: opening the color picker moves DOM focus into Fluent's `Callout` (portaled outside the editor's container), which `FocusEventsPlugin` correctly treats as "left the editor" and nulls the Lexical selection for. That alone was already handled (selection is restored from a saved bookmark before every style application). The actual bug was that Lexical's own reconciler force-focuses the editor root on *every* `editor.update()` that touches selection when the root doesn't already have focus — which, while the picker is open, is always true. That forced focus fought Fluent's Callout for focus on every single drag-driven color commit, repeatedly bouncing focus (and the selection null/restore cycle) between the editor and the popover, which could desync the in-progress drag from the cursor and ultimately apply the wrong color.
+- `applyStyle` now tags its `editor.update()` calls with Lexical's `SKIP_SELECTION_FOCUS_TAG` so style application never forces DOM focus while the picker is open. Focus is returned to the editor exactly once, when the picker actually closes — and only if the editor was the active surface right before the picker opened (captured via a new `onOpenChange` callback on `ColorPickerControl`, fired before Fluent's `setInitialFocus` can steal focus, since checking "is the editor active" at apply-time is meaningless once a popover is already open).
+
 ## [1.0.9] — 2026-06-30 (diagnostic build)
 
 ### Added

@@ -9,6 +9,15 @@ type Props = {
   disabled?: boolean;
   icon: any;
   onChange: (hex: string) => void;
+  /**
+   * Fires synchronously whenever the popover opens or closes — including the
+   * trigger-button click, before Fluent's Callout has a chance to steal DOM
+   * focus via setInitialFocus. Lets the host capture "was the editor the
+   * active surface right before this opened" at the only moment that's
+   * actually knowable, and restore focus once on close rather than fighting
+   * for it on every intermediate color commit while open.
+   */
+  onOpenChange?: (open: boolean) => void;
 };
 
 const PRESET = [
@@ -169,9 +178,16 @@ function useDrag(
   return start;
 }
 
-export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: Props) => {
+export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onOpenChange }: Props) => {
   const [open, setOpen] = React.useState(false);
   const btnRef = React.useRef<HTMLDivElement | null>(null);
+  const setOpenAndNotify = React.useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
   // Tracks whether the user is actively dragging/typing inside the callout so
   // Fluent's auto-dismiss (on scroll/resize/focus-shift/stray click) can be
   // suppressed — the callout should only close via Apply/Close or a genuine
@@ -183,7 +199,7 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
   // listeners on every render — that churn left windows where an outside
   // click could be missed (or the callout dismissed unpredictably) while
   // hue/sv state was updating continuously during a drag.
-  const handleDismiss = React.useCallback(() => setOpen(false), []);
+  const handleDismiss = React.useCallback(() => setOpenAndNotify(false), [setOpenAndNotify]);
   const preventDismissOnEvent = React.useCallback(
     (ev: Event | React.FocusEvent | React.KeyboardEvent | React.MouseEvent) => {
       // Block every auto-dismiss trigger (scroll/resize/focus-shift) except a
@@ -276,9 +292,9 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
       // eslint-disable-next-line no-console
       console.log('[AO-ColorPicker]', title, 'commitHsv -> onChange', { nextHex, close: !!close });
       onChange(nextHex);
-      if (close) setOpen(false);
+      if (close) setOpenAndNotify(false);
     },
-    [onChange, title],
+    [onChange, title, setOpenAndNotify],
   );
 
   const svRef = React.useRef<HTMLDivElement | null>(null);
@@ -342,7 +358,7 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
             wasOpen: open,
             activeElementBeforeToggle: document.activeElement?.tagName,
           });
-          setOpen((p) => !p);
+          setOpenAndNotify(!open);
         }}
       />
       <div
@@ -438,7 +454,7 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
                   commitHsv(h, s, v, true);
                 }}
               />
-              <DefaultButton type='button' text='Close' onClick={() => setOpen(false)} />
+              <DefaultButton type='button' text='Close' onClick={() => setOpenAndNotify(false)} />
             </div>
           </Stack>
         </Callout>
