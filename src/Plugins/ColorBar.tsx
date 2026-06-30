@@ -23,23 +23,11 @@ export const ColorPickerPlugin = ({ disabled }: { disabled: boolean }) => {
 
   const updateToolbar = () => {
     const selection = $getSelection();
-    const isRange = $isRangeSelection(selection);
-    // eslint-disable-next-line no-console
-    console.log('[AO-ColorPicker] updateToolbar', {
-      isRangeSelection: isRange,
-      isCollapsed: isRange ? (selection as RangeSelection).isCollapsed() : null,
-    });
-    if (isRange) {
-      lastRangeSelectionRef.current = selection!.clone();
+    if ($isRangeSelection(selection)) {
+      lastRangeSelectionRef.current = selection.clone();
 
-      const c = $getSelectionStyleValueForProperty(selection as RangeSelection, 'color', '#000000');
-      const bg = $getSelectionStyleValueForProperty(
-        selection as RangeSelection,
-        'background-color',
-        '#ffffff',
-      );
-      // eslint-disable-next-line no-console
-      console.log('[AO-ColorPicker] updateToolbar readback', { color: c, bgColor: bg });
+      const c = $getSelectionStyleValueForProperty(selection, 'color', '#000000');
+      const bg = $getSelectionStyleValueForProperty(selection, 'background-color', '#ffffff');
       setColors({ color: c, bgColor: bg });
     }
   };
@@ -63,8 +51,8 @@ export const ColorPickerPlugin = ({ disabled }: { disabled: boolean }) => {
   // Captured once, synchronously, the instant a picker's trigger button is
   // clicked — i.e. before Fluent's Callout (setInitialFocus) has a chance to
   // move DOM focus into the portaled popover. Checking "is the editor the
-  // active surface" at any later point (inside applyStyle) is meaningless,
-  // since by then focus already belongs to the open popover.
+  // active surface" at any later point is meaningless, since by then focus
+  // already belongs to the open popover.
   const wasEditorActiveRef = React.useRef(false);
 
   const handleOpenChange = (open: boolean) => {
@@ -73,31 +61,16 @@ export const ColorPickerPlugin = ({ disabled }: { disabled: boolean }) => {
       wasEditorActiveRef.current =
         !!root && (document.activeElement === root || root.contains(document.activeElement as Node));
     } else if (wasEditorActiveRef.current) {
-      // Restore focus exactly once, when the popover actually closes — not
-      // on every intermediate color commit while it's open. Lexical's own
-      // reconciler will also try to force focus onto the root whenever an
-      // update touches selection and the root doesn't currently have it
-      // (see SKIP_SELECTION_FOCUS_TAG below); doing this repeatedly while
-      // the popover is open fights Fluent's Callout for focus on every
-      // single drag move, which was producing a focus tug-of-war that
-      // intermittently cleared the selection mid-drag.
+      // Restore focus once the popover closes, so the user can keep typing
+      // immediately — but only if the editor actually owned focus before
+      // the picker opened (don't steal focus from unrelated fields, e.g.
+      // To/CC/BCC in an email form).
       editor.focus();
     }
   };
 
   const applyStyle = (args: { property: 'background-color' | 'color'; color: string }) => {
     if (disabled) return;
-
-    // eslint-disable-next-line no-console
-    console.log('[AO-ColorPicker] applyStyle called', {
-      property: args.property,
-      color: args.color,
-      hasSavedSelection: !!lastRangeSelectionRef.current,
-      savedSelectionIsCollapsed: lastRangeSelectionRef.current?.isCollapsed() ?? null,
-      wasEditorActiveAtOpen: wasEditorActiveRef.current,
-      activeElementTag: document.activeElement?.tagName,
-      activeElementClass: (document.activeElement as HTMLElement | null)?.className,
-    });
 
     editor.update(
       () => {
@@ -107,45 +80,17 @@ export const ColorPickerPlugin = ({ disabled }: { disabled: boolean }) => {
         }
 
         const selection = $getSelection();
-        const isRange = $isRangeSelection(selection);
-
-        // eslint-disable-next-line no-console
-        console.log('[AO-ColorPicker] applyStyle inside editor.update', {
-          hadSavedSelection: !!saved,
-          selectionAfterRestoreIsRange: isRange,
-          selectionAfterRestoreIsCollapsed: isRange ? (selection as RangeSelection).isCollapsed() : null,
-        });
-
-        if (isRange) {
-          $patchStyleText(selection as RangeSelection, { [args.property]: args.color });
-
-          const verify = $getSelectionStyleValueForProperty(
-            selection as RangeSelection,
-            args.property,
-            '<none>',
-          );
-          // eslint-disable-next-line no-console
-          console.log('[AO-ColorPicker] applyStyle after patchStyleText, readback in same update', {
-            property: args.property,
-            appliedColor: args.color,
-            readBack: verify,
-          });
-        } else {
-          // eslint-disable-next-line no-console
-          console.warn(
-            '[AO-ColorPicker] applyStyle: no range selection available — style was NOT applied',
-            { property: args.property, color: args.color },
-          );
+        if ($isRangeSelection(selection)) {
+          $patchStyleText(selection, { [args.property]: args.color });
         }
       },
       // Without this tag, Lexical's reconciler force-focuses the editor root
       // whenever this update's selection diff finds the root isn't already
-      // focused (see Lexical.dev.mjs ~8112) — which it never is while the
-      // color picker's Callout legitimately holds focus. That forced focus
-      // then fights Fluent's Callout for focus on every single drag-driven
-      // commit, repeatedly bouncing focus (and, via FocusEventsPlugin,
-      // nulling and restoring the selection) between the editor and the
-      // popover until the drag's tracked color desynced from the cursor.
+      // focused — which it isn't while the color picker's Callout holds
+      // focus. The picker now only calls applyStyle once, on Apply, so this
+      // is no longer fighting for focus on every drag pixel, but there's no
+      // reason to force a focus change here at all — handleOpenChange above
+      // already does that deliberately, once, on close.
       { tag: SKIP_SELECTION_FOCUS_TAG },
     );
   };

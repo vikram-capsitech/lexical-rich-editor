@@ -2,6 +2,14 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.1.0] — 2026-06-30
+
+### Changed
+- Color picker redesigned around a click-to-pick, explicit-Apply model instead of live-applying color while dragging. Clicking the saturation/value box, the hue bar, a preset swatch, or editing the hex field now only updates the picker's local draft (hex field, swatches, and thumbs all still update live) — nothing is written to the editor until **Apply** is clicked. **Close** discards the draft entirely.
+- This removes the entire class of bug investigated in 1.0.7–1.0.11: continuously calling into the editor on every `mousemove` depended on Lexical syncing DOM selection/focus dozens of times a second while a separate popover legitimately held focus, which in at least one production environment fought badly enough that a drag's `mouseup` was sometimes never delivered to `window` — leaving the drag "stuck" and silently overwriting the document with whatever color a later, unrelated stray cursor movement happened to compute. The editor is now only ever touched once per picker session, by a single deliberate user action, so pointer-event delivery issues can no longer corrupt document content.
+- Removed the temporary `[AO-ColorPicker]` diagnostic logging added in 1.0.9 — no longer needed.
+- `useDrag` and the `interactingRef`/drag-release dismiss-suppression machinery it required have been removed from `ColorPickerComponent.tsx` as dead complexity now that there's no continuous drag tracking.
+
 ## [1.0.11] — 2026-06-30
 
 ### Fixed

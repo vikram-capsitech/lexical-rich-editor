@@ -132,13 +132,6 @@ function FocusEventsPlugin({
       // (e.g. toolbar buttons), not just within the ContentEditable root.
       const container = containerRef.current;
       const stillInside = !!next && (container ? container.contains(next) : root.contains(next));
-      // eslint-disable-next-line no-console
-      console.log('[AO-ColorPicker] FocusEventsPlugin focusout', {
-        relatedTargetTag: next ? (next as HTMLElement).tagName : null,
-        relatedTargetClass: next ? (next as HTMLElement).className : null,
-        stillInside,
-        willClearSelection: !stillInside,
-      });
       if (stillInside) return;
 
       editor.update(() => {
