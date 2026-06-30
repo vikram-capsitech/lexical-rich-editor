@@ -2,6 +2,12 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.0.11] — 2026-06-30
+
+### Fixed
+- The 1.0.10 fix reduced but did not eliminate the focus tug-of-war: a fresh diagnostic log from a real repro showed `commitHsv -> onChange` continuing to fire dozens of times with no further user input after a single discrete action (a hex field blur, not a drag), settling on `#ffffff`. This means a previous drag's `mouseup` never reached `window` (most likely a side effect of the same focus churn interrupting native event delivery), leaving the saturation/value and hue drag's `mousemove` listener permanently attached — so any subsequent stray cursor movement anywhere on the page kept recomputing and re-applying a color clamped to whatever screen edge the cursor drifted toward.
+- The picker's saturation/value and hue drag handlers no longer call into the editor (`onChange`/`applyStyle`) on every `mousemove`. They now only update local preview state (hex field, swatches, thumbs — still fully live during the drag) on each move, and commit to the editor exactly once, on drag end (mouseup) or a plain click. This means even if a `mouseup` is missed for any reason, stray pointer movement can no longer silently keep overwriting the document — it can only affect the picker's own internal preview, which is recoverable by closing the popover.
+
 ## [1.0.10] — 2026-06-30
 
 ### Fixed

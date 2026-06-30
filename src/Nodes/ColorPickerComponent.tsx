@@ -284,18 +284,43 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
     setV(next.v);
   }, [value, open]);
 
+  // Sets local hex/preview state only — cheap, no editor interaction. Used
+  // on every mousemove during a drag so the swatch/hex field track the
+  // cursor live, without touching Lexical on every pixel.
+  const updateHexFromHsv = React.useCallback((hh: number, ss: number, vv: number) => {
+    const rgb = hsvToRgb(hh, ss, vv);
+    const nextHex = rgbToHex(rgb.r, rgb.g, rgb.b);
+    setHex(nextHex);
+    return nextHex;
+  }, []);
+
   const commitHsv = React.useCallback(
     (hh: number, ss: number, vv: number, close?: boolean) => {
-      const rgb = hsvToRgb(hh, ss, vv);
-      const nextHex = rgbToHex(rgb.r, rgb.g, rgb.b);
-      setHex(nextHex);
+      const nextHex = updateHexFromHsv(hh, ss, vv);
       // eslint-disable-next-line no-console
       console.log('[AO-ColorPicker]', title, 'commitHsv -> onChange', { nextHex, close: !!close });
       onChange(nextHex);
       if (close) setOpenAndNotify(false);
     },
-    [onChange, title, setOpenAndNotify],
+    [onChange, title, setOpenAndNotify, updateHexFromHsv],
   );
+
+  // Mirror the latest h/s/v in refs (updated inline, not via effect, so
+  // there's no async gap) so the drag-end handlers below always see the
+  // final value — the editor is only touched once per gesture (on mouseup),
+  // not on every mousemove.
+  const hRef = React.useRef(h);
+  const sRef = React.useRef(s);
+  const vRef = React.useRef(v);
+  React.useEffect(() => {
+    hRef.current = h;
+  }, [h]);
+  React.useEffect(() => {
+    sRef.current = s;
+  }, [s]);
+  React.useEffect(() => {
+    vRef.current = v;
+  }, [v]);
 
   const svRef = React.useRef<HTMLDivElement | null>(null);
   const onSVMove = React.useCallback(
@@ -308,11 +333,20 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
       const vv = rect.height === 0 ? 0 : 1 - y / rect.height;
       setS(ss);
       setV(vv);
-      commitHsv(h, ss, vv);
+      sRef.current = ss;
+      vRef.current = vv;
+      // Local-only preview. Touching the editor (onChange/applyStyle) on
+      // every mousemove forced a Lexical selection/DOM-sync cycle on every
+      // pixel of the drag, fighting Fluent's Callout for focus dozens of
+      // times a second — the actual commit happens once, on drag end below.
+      updateHexFromHsv(hRef.current, ss, vv);
     },
-    [h, commitHsv],
+    [updateHexFromHsv],
   );
-  const startSV = useDrag(onSVMove, undefined, interactingRef);
+  const commitSV = React.useCallback(() => {
+    commitHsv(hRef.current, sRef.current, vRef.current);
+  }, [commitHsv]);
+  const startSV = useDrag(onSVMove, commitSV, interactingRef);
 
   const hueRef = React.useRef<HTMLDivElement | null>(null);
   const onHueMove = React.useCallback(
@@ -322,11 +356,15 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
       const x = clamp(clientX - rect.left, 0, rect.width);
       const hh = rect.width === 0 ? 0 : (x / rect.width) * 360;
       setH(hh);
-      commitHsv(hh, s, v);
+      hRef.current = hh;
+      updateHexFromHsv(hh, sRef.current, vRef.current);
     },
-    [s, v, commitHsv],
+    [updateHexFromHsv],
   );
-  const startHue = useDrag((x) => onHueMove(x), undefined, interactingRef);
+  const commitHue = React.useCallback(() => {
+    commitHsv(hRef.current, sRef.current, vRef.current);
+  }, [commitHsv]);
+  const startHue = useDrag((x) => onHueMove(x), commitHue, interactingRef);
 
   const svThumb = React.useMemo(() => ({ left: `${s * 100}%`, top: `${(1 - v) * 100}%` }), [s, v]);
   const hueThumb = React.useMemo(() => ({ left: `${(h / 360) * 100}%` }), [h]);
