@@ -1,5 +1,6 @@
-import { Callout, DefaultButton, Stack, TextField } from '@fluentui/react';
+import { Callout, Stack, TextField } from '@fluentui/react';
 import { Button } from '@fluentui/react-components';
+import { Dismiss16Regular } from '@fluentui/react-icons';
 import * as React from 'react';
 import './ColorPickerComponent.css';
 
@@ -63,6 +64,11 @@ const normalizeHex = (v: string) => {
   if (hex.length === 4 || hex.length === 7) return hex.toLowerCase();
   return '#000000';
 };
+
+// A hex string is only safe to commit once it's a complete token — while the
+// user is mid-keystroke ("#3", "#3a4") it's neither valid nor intentional,
+// so live-apply must not fire for those partial states.
+const isCompleteHex = (v: string) => /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test((v ?? '').trim());
 
 const hexToRgb = (hex: string) => {
   const h = normalizeHex(hex).replace('#', '');
@@ -173,83 +179,141 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
     };
   }, [open]);
 
-  // The color actually applied to the editor right now — independent of
-  // whatever the user may be experimenting with in the (unapplied) draft
-  // below. Used for the small indicator under the trigger button so it
-  // never shows a color the user picked but then discarded via Close.
   const appliedHex = React.useMemo(() => normalizeHex(value || '#000000'), [value]);
 
-  // Draft state, local to this open session — nothing here touches the
-  // editor. The picker no longer applies color live while the user is
-  // experimenting (via drag or otherwise): only a single, deliberate Apply
-  // click commits a color, so stray pointer activity can never silently
-  // overwrite the document.
-  const [hex, setHex] = React.useState<string>(appliedHex);
+  // There's no more "draft vs applied" split — every interaction commits
+  // straight to the editor via onChange, so this state IS the live color.
+  const [hex, setHexState] = React.useState<string>(appliedHex);
+  const [hexText, setHexText] = React.useState<string>(appliedHex);
   const { r, g, b } = React.useMemo(() => hexToRgb(hex), [hex]);
   const hsv = React.useMemo(() => rgbToHsv(r, g, b), [r, g, b]);
   const [h, setH] = React.useState(hsv.h);
   const [s, setS] = React.useState(hsv.s);
   const [v, setV] = React.useState(hsv.v);
 
-  const setDraft = React.useCallback((nextHex: string) => {
-    setHex(nextHex);
-    const rgb = hexToRgb(nextHex);
-    const next = rgbToHsv(rgb.r, rgb.g, rgb.b);
-    setH(next.h);
-    setS(next.s);
-    setV(next.v);
-  }, []);
+  // Commits a color: updates local state for the swatches/thumbs AND pushes
+  // it straight to the editor. Every gesture in this popover funnels through
+  // here so there is a single point where "live apply" happens.
+  const commit = React.useCallback(
+    (nextHex: string) => {
+      const rgb = hexToRgb(nextHex);
+      const next = rgbToHsv(rgb.r, rgb.g, rgb.b);
+      setHexState(nextHex);
+      setHexText(nextHex);
+      setH(next.h);
+      setS(next.s);
+      setV(next.v);
+      onChange(nextHex);
+    },
+    [onChange],
+  );
 
-  const setDraftFromHsv = React.useCallback((hh: number, ss: number, vv: number) => {
-    const rgb = hsvToRgb(hh, ss, vv);
-    setHex(rgbToHex(rgb.r, rgb.g, rgb.b));
-    setH(hh);
-    setS(ss);
-    setV(vv);
-  }, []);
+  const commitFromHsv = React.useCallback(
+    (hh: number, ss: number, vv: number) => {
+      const rgb = hsvToRgb(hh, ss, vv);
+      const nextHex = rgbToHex(rgb.r, rgb.g, rgb.b);
+      setHexState(nextHex);
+      setHexText(nextHex);
+      setH(hh);
+      setS(ss);
+      setV(vv);
+      onChange(nextHex);
+    },
+    [onChange],
+  );
 
-  // Re-seed the draft from the editor's actual color only when the popover
-  // freshly opens — never while it's open. The draft is the single source
-  // of truth for the whole open session; there's no live round trip through
-  // the editor to resync from anymore.
+  // Re-seed from the editor's actual color only when the popover freshly
+  // opens — never while it's open, since our own commits are already the
+  // source of truth for the rest of the session.
   const wasOpenRef = React.useRef(open);
   React.useEffect(() => {
     const justOpened = open && !wasOpenRef.current;
     wasOpenRef.current = open;
     if (!justOpened) return;
-    setDraft(appliedHex);
-  }, [appliedHex, open, setDraft]);
+    setHexState(appliedHex);
+    setHexText(appliedHex);
+    const rgb = hexToRgb(appliedHex);
+    const next = rgbToHsv(rgb.r, rgb.g, rgb.b);
+    setH(next.h);
+    setS(next.s);
+    setV(next.v);
+  }, [appliedHex, open]);
 
+  // --- Saturation/Value square: click-to-set and drag-to-follow -----------
   const svRef = React.useRef<HTMLDivElement | null>(null);
-  const handleSVClick = React.useCallback(
-    (e: React.MouseEvent) => {
-      if (!svRef.current) return;
-      const rect = svRef.current.getBoundingClientRect();
-      const x = clamp(e.clientX - rect.left, 0, rect.width);
-      const y = clamp(e.clientY - rect.top, 0, rect.height);
-      const ss = rect.width === 0 ? 0 : x / rect.width;
-      const vv = rect.height === 0 ? 0 : 1 - y / rect.height;
-      setDraftFromHsv(h, ss, vv);
+  const svPointFromEvent = React.useCallback((clientX: number, clientY: number) => {
+    if (!svRef.current) return null;
+    const rect = svRef.current.getBoundingClientRect();
+    const x = clamp(clientX - rect.left, 0, rect.width);
+    const y = clamp(clientY - rect.top, 0, rect.height);
+    const ss = rect.width === 0 ? 0 : x / rect.width;
+    const vv = rect.height === 0 ? 0 : 1 - y / rect.height;
+    return { ss, vv };
+  }, []);
+
+  const hRef = React.useRef(h);
+  hRef.current = h;
+
+  const handleSVPointerDown = React.useCallback(
+    (e: React.PointerEvent) => {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const pt = svPointFromEvent(e.clientX, e.clientY);
+      if (pt) commitFromHsv(hRef.current, pt.ss, pt.vv);
     },
-    [h, setDraftFromHsv],
+    [svPointFromEvent, commitFromHsv],
+  );
+  const handleSVPointerMove = React.useCallback(
+    (e: React.PointerEvent) => {
+      if (e.buttons !== 1) return;
+      const pt = svPointFromEvent(e.clientX, e.clientY);
+      if (pt) commitFromHsv(hRef.current, pt.ss, pt.vv);
+    },
+    [svPointFromEvent, commitFromHsv],
   );
 
+  // --- Hue slider: click-to-set and drag-to-follow -------------------------
   const hueRef = React.useRef<HTMLDivElement | null>(null);
-  const handleHueClick = React.useCallback(
-    (e: React.MouseEvent) => {
-      if (!hueRef.current) return;
-      const rect = hueRef.current.getBoundingClientRect();
-      const x = clamp(e.clientX - rect.left, 0, rect.width);
-      const hh = rect.width === 0 ? 0 : (x / rect.width) * 360;
-      setDraftFromHsv(hh, s, v);
+  const sRef = React.useRef(s);
+  sRef.current = s;
+  const vRef = React.useRef(v);
+  vRef.current = v;
+
+  const huePointFromEvent = React.useCallback((clientX: number) => {
+    if (!hueRef.current) return null;
+    const rect = hueRef.current.getBoundingClientRect();
+    const x = clamp(clientX - rect.left, 0, rect.width);
+    return rect.width === 0 ? 0 : (x / rect.width) * 360;
+  }, []);
+
+  const handleHuePointerDown = React.useCallback(
+    (e: React.PointerEvent) => {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const hh = huePointFromEvent(e.clientX);
+      if (hh != null) commitFromHsv(hh, sRef.current, vRef.current);
     },
-    [s, v, setDraftFromHsv],
+    [huePointFromEvent, commitFromHsv],
+  );
+  const handleHuePointerMove = React.useCallback(
+    (e: React.PointerEvent) => {
+      if (e.buttons !== 1) return;
+      const hh = huePointFromEvent(e.clientX);
+      if (hh != null) commitFromHsv(hh, sRef.current, vRef.current);
+    },
+    [huePointFromEvent, commitFromHsv],
   );
 
-  const handleApply = React.useCallback(() => {
-    onChange(hex);
-    setOpenAndNotify(false);
-  }, [onChange, hex, setOpenAndNotify]);
+  // --- Hex field: live-commit once the text is a complete token -----------
+  const handleHexChange = React.useCallback(
+    (_: any, val?: string) => {
+      const next = val ?? '';
+      setHexText(next);
+      if (isCompleteHex(next.trim())) commit(normalizeHex(next));
+    },
+    [commit],
+  );
+  const handleHexBlur = React.useCallback(() => {
+    commit(normalizeHex(hexText));
+  }, [hexText, commit]);
 
   const svThumb = React.useMemo(() => ({ left: `${s * 100}%`, top: `${(1 - v) * 100}%` }), [s, v]);
   const hueThumb = React.useMemo(() => ({ left: `${(h / 360) * 100}%` }), [h]);
@@ -302,50 +366,173 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
           directionalHint={4}
           className='aoColorCallout'
           preventDismissOnEvent={preventDismissOnEvent}>
-          <Stack tokens={{ childrenGap: 10 }} styles={{ root: { padding: 12, width: 320 } }}>
-            <div className='aoLexRow'>
-              <div className='aoLexSwatch' style={{ background: hex }} />
-              <div className='aoLexTitle'>{title}</div>
+          <Stack tokens={{ childrenGap: 14 }} styles={{ root: { padding: '14px 16px 16px', width: 288 } }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#242424', letterSpacing: 0.1 }}>{title}</div>
+              <button
+                type='button'
+                aria-label='Close'
+                onClick={() => setOpenAndNotify(false)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 24,
+                  height: 24,
+                  padding: 0,
+                  border: 'none',
+                  borderRadius: 4,
+                  background: 'transparent',
+                  color: '#616161',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#f0f0f0')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}>
+                <Dismiss16Regular />
+              </button>
             </div>
 
-            <div className='aoLexRow'>
-              <div className='aoLexLabel'>Hex</div>
-              <TextField
-                value={hex}
-                onChange={(_, val) => setHex(normalizeHex(val || ''))}
-                onBlur={() => setDraft(normalizeHex(hex))}
+            {/* Saturation / Value square */}
+            <div
+              ref={svRef}
+              onPointerDown={handleSVPointerDown}
+              onPointerMove={handleSVPointerMove}
+              style={{
+                position: 'relative',
+                width: '100%',
+                height: 150,
+                borderRadius: 8,
+                overflow: 'hidden',
+                cursor: 'crosshair',
+                touchAction: 'none',
+                boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+              }}>
+              <div style={{ position: 'absolute', inset: 0, background: hueColor }} />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(to right, #fff, rgba(255,255,255,0))',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(to top, #000, rgba(0,0,0,0))',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  border: '2px solid #fff',
+                  boxShadow: '0 0 0 1px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.4)',
+                  transform: 'translate(-50%, -50%)',
+                  pointerEvents: 'none',
+                  ...svThumb,
+                }}
               />
             </div>
 
-            <div className='aoLexSwatches'>
-              {PRESET.map((c) => (
-                <button
-                  key={c}
-                  type='button'
-                  className='aoLexSwatchBtn'
-                  style={{ background: c }}
-                  onClick={() => setDraft(c)}
-                  title={c}
-                />
-              ))}
+            {/* Hue slider */}
+            <div
+              ref={hueRef}
+              onPointerDown={handleHuePointerDown}
+              onPointerMove={handleHuePointerMove}
+              style={{
+                position: 'relative',
+                width: '100%',
+                height: 12,
+                borderRadius: 999,
+                cursor: 'pointer',
+                touchAction: 'none',
+                background:
+                  'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)',
+                boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+              }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  background: hueColor,
+                  border: '2px solid #fff',
+                  boxShadow: '0 0 0 1px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.4)',
+                  transform: 'translate(-50%, -50%)',
+                  pointerEvents: 'none',
+                  ...hueThumb,
+                }}
+              />
             </div>
 
-            <div className='aoLexSV' ref={svRef} onClick={handleSVClick}>
-              <div className='aoLexSVHue' style={{ background: hueColor }} />
-              <div className='aoLexSVWhite' />
-              <div className='aoLexSVBlack' />
-              <div className='aoLexSVThumb' style={svThumb} />
+            {/* Hex + live preview */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 6,
+                  flexShrink: 0,
+                  background: hex,
+                  boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.12)',
+                }}
+              />
+              <TextField
+                value={hexText}
+                onChange={handleHexChange}
+                onBlur={handleHexBlur}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commit(normalizeHex(hexText));
+                }}
+                styles={{ root: { flex: 1 }, fieldGroup: { borderRadius: 6 } }}
+              />
             </div>
 
-            <div className='aoLexHue' ref={hueRef} onClick={handleHueClick}>
-              <div className='aoLexHueThumb' style={hueThumb} />
-            </div>
-
-            <div className='aoLexPreview' style={{ background: hex }} />
-
-            <div className='aoLexActions'>
-              <DefaultButton type='button' text='Apply' onClick={handleApply} />
-              <DefaultButton type='button' text='Close' onClick={() => setOpenAndNotify(false)} />
+            {/* Preset swatches */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#8a8a8a', marginBottom: 6, letterSpacing: 0.3 }}>
+                STANDARD COLORS
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(9, 1fr)',
+                  gap: 6,
+                }}>
+                {PRESET.map((c) => {
+                  const isSelected = c.toLowerCase() === hex.toLowerCase();
+                  return (
+                    <button
+                      key={c}
+                      type='button'
+                      onClick={() => commit(c)}
+                      title={c}
+                      aria-label={c}
+                      style={{
+                        width: 22,
+                        height: 22,
+                        padding: 0,
+                        borderRadius: 5,
+                        background: c,
+                        cursor: 'pointer',
+                        boxShadow: isSelected
+                          ? '0 0 0 2px #fff, 0 0 0 3px #4a86e8'
+                          : 'inset 0 0 0 1px rgba(0,0,0,0.15)',
+                        border: 'none',
+                        transition: 'transform 80ms ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.12)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </Stack>
         </Callout>

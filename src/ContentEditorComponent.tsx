@@ -32,6 +32,8 @@ import {
 
 import './Editor.css';
 
+import { DEFAULT_PAGE_SETUP, PageSetupValue, resolvePageCanvasMetrics } from './Types/PageSetup';
+
 import { AutocompleteNode } from './Nodes/AutoCompleteNode';
 import { HtmlBlockNode } from './Nodes/HtmlBlockNode';
 import { ImageNode } from './Nodes/ImageNode';
@@ -319,6 +321,8 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
     const handleCharCount = useCallback((count: number) => setCharCount(count), []);
 
     const [refErrors, setRefErrors] = useState<string[]>([]);
+    const [pageSetup, setPageSetup] = useState<PageSetupValue>(DEFAULT_PAGE_SETUP);
+    const pageCanvas = resolvePageCanvasMetrics(pageSetup);
 
     const contentEditableDomRef = useRef<HTMLDivElement>(null);
     const previousOverLimitRef = useRef(false);
@@ -371,8 +375,8 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
         color: 'var(--colorNeutralForeground3, grey)',
         position: 'absolute',
         top: props.level !== ContentEditorLevel.None ? '17px' : '27px',
-        left: 20,
-        right: 20,
+        left: pageCanvas.paddingPx,
+        right: pageCanvas.paddingPx,
         fontSize: '14px',
         pointerEvents: 'none',
         userSelect: 'none',
@@ -383,8 +387,6 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
         outline: 'none',
         overflow: 'auto',
         marginTop: '0px',
-        paddingLeft: '20px',
-        paddingRight: '20px',
         position: 'relative',
         background: 'var(--colorNeutralBackground1, #ffffff)',
         justifyContent: 'center',
@@ -509,6 +511,8 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
                 <ToolBarPlugins
                   level={props.level ?? ContentEditorLevel.Basic}
                   readOnly={props.readOnly}
+                  pageSetup={pageSetup}
+                  onPageSetupChange={setPageSetup}
                 />
               </div>
 
@@ -520,6 +524,7 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
                   overflowY: 'scroll',
                   overflowX: 'auto',
                   minWidth: 0,
+                  background: pageCanvas.widthPx !== undefined ? '#eef0f2' : undefined,
                 }}
                 onClickCapture={handleReadOnlyClickCapture}>
                 <RichTextPlugin
@@ -532,7 +537,18 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
                       <ContentEditable
                         ref={contentEditableDomRef}
                         className={css(EditorStyles.contentEditor)}
-                        style={{ paddingTop: props.level !== ContentEditorLevel.None ? 0 : 10 }}
+                        style={{
+                          paddingTop: props.level !== ContentEditorLevel.None ? 0 : 10,
+                          paddingLeft: pageCanvas.paddingPx,
+                          paddingRight: pageCanvas.paddingPx,
+                          maxWidth: pageCanvas.widthPx,
+                          marginLeft: pageCanvas.widthPx !== undefined ? 'auto' : undefined,
+                          marginRight: pageCanvas.widthPx !== undefined ? 'auto' : undefined,
+                          boxShadow:
+                            pageCanvas.widthPx !== undefined
+                              ? '0 0 0 1px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.08)'
+                              : undefined,
+                        }}
                         // Disable browser's built-in spellcheck red squiggles when
                         // our own SpellCheckPlugin is active — avoids double underlines.
                         spellCheck={!resolvedSpellCheck}

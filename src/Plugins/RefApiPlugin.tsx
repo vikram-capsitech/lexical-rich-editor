@@ -4,6 +4,7 @@ import { $getRoot } from 'lexical';
 import React, { useImperativeHandle } from 'react';
 import { ContentEditorRef } from '../ContentEditorComponent.types';
 import { BlockSpec, hasBlock, removeBlock, upsertBlock } from '../Utils/Helper';
+import { postProcessOutput } from '../Utils/Sanitize';
 
 export default function RefApiPlugin({
   forwardedRef,
@@ -38,7 +39,7 @@ export default function RefApiPlugin({
           editor.getEditorState().read(() => {
             html = $generateHtmlFromNodes(editor, null);
           });
-          return html;
+          return postProcessOutput(html);
         },
 
         clear: () => {

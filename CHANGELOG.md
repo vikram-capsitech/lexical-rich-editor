@@ -2,6 +2,15 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.2.0] — 2026-07-02
+
+### Added
+- **Page Setup toolbar control** (Standard/Pro levels) — a Google Docs-style dropdown for Page size (Pageless plus 11 standard paper sizes: A4, Letter, Legal, Tabloid, A3, A5, B4, B5, Statement, Executive, Folio), Orientation (Portrait/Landscape), and Margins (Narrow/Normal/Moderate/Wide). Selecting a page size constrains the editing canvas to that paper width (96px/inch), centers it, and renders it as a white page sheet with a shadow on a neutral canvas background — a purely visual "page view," not multi-page pagination; content still scrolls continuously and does not auto-split across pages. Orientation and Margins are disabled while Pageless is selected. State is internal to the component (not currently persisted or exposed as a controlled prop).
+
+### Fixed
+- `getValue()` and the `onChange` HTML output no longer emit the doubled `<b><strong>text</strong></b>` markup that Lexical's `exportDOM` produces for bold text (`createDOM` uses `<strong>` for the live editable view; `exportDOM` additionally wraps it in `<b>` for email-client compatibility). The existing `postProcessOutput()` sanitizer — which already collapsed this pattern along with the equivalent `<i><em>` case — was written but never wired into the actual output paths; it's now applied in both `CustomOnChangePlugin` and `RefApiPlugin.getValue()`.
+- Color picker: reworked the color-commit model back to live pointer-driven updates (saturation/value square and hue slider now commit continuously via Pointer Capture, rather than requiring a separate Apply click introduced in 1.1.0). Uses `setPointerCapture` on pointer-down so drag events keep targeting the picker even if focus shifts mid-drag, addressing the underlying focus-contention issue from 1.0.7–1.0.11 directly rather than by avoiding live updates. Popover header redesigned with a single Close (✕) button in place of separate Apply/Close buttons; hex field now live-commits once its value is a complete `#rgb`/`#rrggbb` token instead of requiring blur.
+
 ## [1.1.0] — 2026-06-30
 
 ### Changed
