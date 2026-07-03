@@ -40,37 +40,69 @@ export const getSelectedNode = ( selection: RangeSelection ): TextNode | Element
 }
 const VERTICAL_GAP = 10;
 const HORIZONTAL_OFFSET = 5;
+const VIEWPORT_MARGIN = 8;
 
-export const setFloatingElemPositionForLinkEditor = (targetRect: DOMRect | null, floatingElem: HTMLElement, anchorElem: HTMLElement, verticalGap: number = VERTICAL_GAP, horizontalOffset: number = HORIZONTAL_OFFSET): void => {
-  
-  const scrollerElem = anchorElem.parentElement;
+/**
+ * Mounts a `position: fixed` overlay host inside the closest Fluent
+ * Panel/Layer (or document.body) rather than deep inside the editor's own
+ * DOM tree. Matches CharacterStylesPopupPlugin's `useFloatingPortalContainer`
+ * — without it, a `position: absolute` popup nested inside the editor can
+ * get clipped/hidden by a host Panel/Layer's own stacking context or an
+ * ancestor's `overflow`, even though it renders with a valid opacity/rect.
+ */
+function useFloatingPortalContainer(editor: LexicalEditor) {
+  const [container, setContainer] = useState<HTMLElement | null>(null);
 
-  if (targetRect === null || !scrollerElem) {
+  useEffect(() => {
+    const root = editor.getRootElement();
+    if (!root) return;
+
+    const panelOrLayer =
+      (root.closest('.ms-Panel-main') as HTMLElement | null) ||
+      (root.closest('.ms-Panel') as HTMLElement | null) ||
+      (root.closest('.ms-Layer') as HTMLElement | null) ||
+      document.body;
+
+    const host = document.createElement('div');
+    host.className = 'lexical-floating-ui-host';
+    panelOrLayer.appendChild(host);
+    setContainer(host);
+
+    return () => {
+      host.remove();
+      setContainer(null);
+    };
+  }, [editor]);
+
+  return container;
+}
+
+export const setFloatingElemPositionForLinkEditor = (targetRect: DOMRect | null, floatingElem: HTMLElement, topBoundary: number = VIEWPORT_MARGIN, verticalGap: number = VERTICAL_GAP, horizontalOffset: number = HORIZONTAL_OFFSET): void => {
+  if (targetRect === null) {
     floatingElem.style.opacity = '0';
     floatingElem.style.transform = 'translate(-10000px, -10000px)';
     return;
   }
 
   const floatingElemRect = floatingElem.getBoundingClientRect();
-  const anchorElementRect = anchorElem.getBoundingClientRect();
-  const editorScrollerRect = scrollerElem.getBoundingClientRect();
 
-  let top = targetRect.top - verticalGap;
+  let top = targetRect.bottom + verticalGap;
   let left = targetRect.left - horizontalOffset;
 
-  if (top < editorScrollerRect.top) {
-    top += floatingElemRect.height + targetRect.height + verticalGap * 2;
+  if (top + floatingElemRect.height > window.innerHeight - VIEWPORT_MARGIN) {
+    top = targetRect.top - floatingElemRect.height - verticalGap;
   }
 
-  if (left + floatingElemRect.width > editorScrollerRect.right) {
-    left = editorScrollerRect.right - floatingElemRect.width - horizontalOffset;
+  if (top < topBoundary) {
+    top = topBoundary;
   }
 
-  top -= anchorElementRect.top;
-  left -= anchorElementRect.left;
+  left = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - floatingElemRect.width - VIEWPORT_MARGIN));
 
   floatingElem.style.opacity = '1';
-  floatingElem.style.transform = `translate(${left}px, ${top}px)`;
+  floatingElem.style.transform = 'none';
+  floatingElem.style.top = `${top}px`;
+  floatingElem.style.left = `${left}px`;
 }
 
 const SUPPORTED_URL_PROTOCOLS = new Set([
@@ -101,12 +133,11 @@ const preventDefault = ( event: React.KeyboardEvent<HTMLInputElement> | React.Mo
 interface IFloatingLinkEditor {
   isLink: boolean;
   editor: LexicalEditor;
-  anchorElem: HTMLElement;
   isLinkEditMode: boolean;
   setIsLink: Dispatch<boolean>;
   setIsLinkEditMode: Dispatch<boolean>;
 }
-const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMode, setIsLinkEditMode}: IFloatingLinkEditor): JSX.Element => {
+const FloatingLinkEditor = ({editor, isLink, setIsLink, isLinkEditMode, setIsLinkEditMode}: IFloatingLinkEditor): JSX.Element => {
   const [editedLinkUrl, setEditedLinkUrl] = useState('https://');
   const [lastSelection, setLastSelection] = useState<BaseSelection | null>( null);
   const [linkUrl, setLinkUrl] = useState('');
@@ -151,13 +182,16 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
       const domRect: DOMRect | undefined =
         nativeSelection.focusNode?.parentElement?.getBoundingClientRect();
       if (domRect) {
-        domRect.y += 40;
-        setFloatingElemPositionForLinkEditor(domRect, editorElem, anchorElem);
+        const toolbarEl = rootElement
+          .closest('.lexical-rich-editor-root')
+          ?.querySelector('.editor-toolbar-root') as HTMLElement | null;
+        const topBoundary = toolbarEl ? toolbarEl.getBoundingClientRect().bottom + 8 : 8;
+        setFloatingElemPositionForLinkEditor(domRect, editorElem, topBoundary);
       }
       setLastSelection(selection);
     } else if (!activeElement || activeElement.className !== 'aoLinkInput') {
       if (rootElement !== null) {
-        setFloatingElemPositionForLinkEditor(null, editorElem, anchorElem);
+        setFloatingElemPositionForLinkEditor(null, editorElem);
       }
       setLastSelection(null);
       setIsLinkEditMode(false);
@@ -165,31 +199,27 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
     }
 
     return true;
-  }, [anchorElem, editor, setIsLinkEditMode, isLinkEditMode, isLink, linkUrl]);
+  }, [editor, setIsLinkEditMode, isLinkEditMode, isLink, linkUrl]);
 
   useEffect(() => {
-    const scrollerElem = anchorElem.parentElement;
-
     const update = () => {
       editor.getEditorState().read(() => {
         $updateLinkEditor();
       });
     };
 
-    window.addEventListener('resize', update);
+    const root = editor.getRootElement();
 
-    if (scrollerElem) {
-      scrollerElem.addEventListener('scroll', update);
-    }
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    root?.addEventListener('scroll', update, { passive: true });
 
     return () => {
       window.removeEventListener('resize', update);
-
-      if (scrollerElem) {
-        scrollerElem.removeEventListener('scroll', update);
-      }
+      window.removeEventListener('scroll', update, true);
+      root?.removeEventListener('scroll', update);
     };
-  }, [anchorElem.parentElement, editor, $updateLinkEditor]);
+  }, [editor, $updateLinkEditor]);
 
   useEffect(() => {
     return mergeRegister(
@@ -365,6 +395,7 @@ const useFloatingLinkEditorToolbar = (
 ): JSX.Element | null => {
   const [activeEditor, setActiveEditor] = useState(editor);
   const [isLink, setIsLink] = useState(false);
+  const portalContainer = useFloatingPortalContainer(editor);
 
   useEffect(() => {
     function $updateToolbar() {
@@ -415,8 +446,8 @@ const useFloatingLinkEditorToolbar = (
     );
   }, [editor]);
 
-  if (!anchorElem || !(anchorElem instanceof HTMLElement)) {
-    return null; // Prevent rendering if anchorElem is invalid
+  if (!anchorElem || !(anchorElem instanceof HTMLElement) || !portalContainer) {
+    return null; // Prevent rendering if anchorElem or the portal host isn't ready
   }
 
   return createPortal(
@@ -424,11 +455,10 @@ const useFloatingLinkEditorToolbar = (
       isLink={isLink}
       editor={activeEditor}
       setIsLink={setIsLink}
-      anchorElem={anchorElem}
       isLinkEditMode={isLinkEditMode}
       setIsLinkEditMode={setIsLinkEditMode}
     />,
-    anchorElem
+    portalContainer
   );
 };
 interface IFloatingLinkEditorPlugin {
