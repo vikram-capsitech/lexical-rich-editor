@@ -66,35 +66,6 @@ import { ToolBarPlugins } from "./Plugins/ToolBar";
 import YoutubeDeletePlugin from "./Plugins/YoutubeDeletePlugin";
 import { $getRoot } from "lexical";
 import { theme } from "./Theme";
-} from './ContentEditorComponent.types';
-
-import './Editor.css';
-
-import { DEFAULT_PAGE_SETUP, PageSetupValue, resolvePageCanvasMetrics } from './Types/PageSetup';
-
-import { AutocompleteNode } from './Nodes/AutoCompleteNode';
-import { HtmlBlockNode } from './Nodes/HtmlBlockNode';
-import { ImageNode } from './Nodes/ImageNode';
-import { InlineImageNode } from './Nodes/InlineImageNode';
-import { PageBreakNode } from './Nodes/PageBreakNode';
-import { SpellErrorNode } from './Nodes/SpellErrorNode';
-import { YouTubeNode } from './Nodes/YoutubeNode';
-
-import AutocompletePlugin from './Plugins/AutoComplete';
-import CharacterStylesPopupPlugin from './Plugins/CharacterStylesPopupPlugin';
-import { CustomOnChangePlugin } from './Plugins/CustomOnChange';
-import { FloatingLinkEditorPlugin } from './Plugins/FloatLinkEditor';
-import ImagesPlugin from './Plugins/ImagePlugin';
-import InlineImagePlugin from './Plugins/InlineImage';
-import PageBreakPlugin from './Plugins/PageBreak';
-import RefApiPlugin from './Plugins/RefApiPlugin';
-import SpellCheckPlugin from './Plugins/Spellcheckplugin';
-import TableActionMenuPlugin from './Plugins/TableActionMenuPlugin';
-import TableCellResizerPlugin from './Plugins/TableCellResizer';
-import { ToolBarPlugins } from './Plugins/ToolBar';
-import YoutubeDeletePlugin from './Plugins/YoutubeDeletePlugin';
-import { $getRoot } from 'lexical';
-import { theme } from './Theme';
 
 function ReadOnlyPlugin({ readonly }: { readonly: boolean }) {
   const [editor] = useLexicalComposerContext();
@@ -403,9 +374,9 @@ export const ContentEditorComponent = forwardRef<
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-    const [refErrors, setRefErrors] = useState<string[]>([]);
-    const [pageSetup, setPageSetup] = useState<PageSetupValue>(DEFAULT_PAGE_SETUP);
-    const pageCanvas = resolvePageCanvasMetrics(pageSetup);
+  const onAnchorRef = (elem: HTMLDivElement | null) => {
+    if (elem) setFloatingAnchorElem(elem);
+  };
 
   const initialConfig: any = {
     namespace: props.namespace,
@@ -444,18 +415,8 @@ export const ContentEditorComponent = forwardRef<
       color: "var(--colorNeutralForeground3, grey)",
       position: "absolute",
       top: props.level !== ContentEditorLevel.None ? "17px" : "27px",
-      // Mirrors the ContentEditable's own box model (maxWidth + centered
-      // margin + padding) rather than a fixed left/right offset, since the
-      // placeholder is positioned relative to the full-width outer wrapper,
-      // not the (possibly narrower, centered) page sheet the text sits in.
-      left: 0,
-      right: 0,
-      maxWidth: pageCanvas.widthPx,
-      marginLeft: pageCanvas.widthPx !== undefined ? "auto" : undefined,
-      marginRight: pageCanvas.widthPx !== undefined ? "auto" : undefined,
-      paddingLeft: pageCanvas.paddingPx,
-      paddingRight: pageCanvas.paddingPx,
-      boxSizing: "border-box",
+      left: pageCanvas.paddingPx,
+      right: pageCanvas.paddingPx,
       fontSize: "14px",
       pointerEvents: "none",
       userSelect: "none",
@@ -466,8 +427,6 @@ export const ContentEditorComponent = forwardRef<
       outline: "none",
       overflow: "auto",
       marginTop: "0px",
-      paddingLeft: "20px",
-      paddingRight: "20px",
       position: "relative",
       background: "var(--colorNeutralBackground1, #ffffff)",
       justifyContent: "center",
@@ -513,34 +472,6 @@ export const ContentEditorComponent = forwardRef<
             `Word limit exceeded (${wordCount} / ${props.wordLimit} words used)`),
     );
   }
-    const EditorStyles = mergeStyleSets({
-      editorPlaceholder: {
-        color: 'var(--colorNeutralForeground3, grey)',
-        position: 'absolute',
-        top: props.level !== ContentEditorLevel.None ? '17px' : '27px',
-        left: pageCanvas.paddingPx,
-        right: pageCanvas.paddingPx,
-        fontSize: '14px',
-        pointerEvents: 'none',
-        userSelect: 'none',
-      },
-      contentEditor: {
-        zIndex: 0,
-        flex: 'auto',
-        outline: 'none',
-        overflow: 'auto',
-        marginTop: '0px',
-        position: 'relative',
-        background: 'var(--colorNeutralBackground1, #ffffff)',
-        justifyContent: 'center',
-        height: props.contentHeight ?? '100%',
-        ...(isReadOnly && {
-          cursor: 'not-allowed',
-          opacity: 0.75,
-          userSelect: 'text',
-        }),
-      },
-    });
 
   if (props.required && touched && wordCount === 0) {
     internalErrors.push(
@@ -627,46 +558,6 @@ export const ContentEditorComponent = forwardRef<
               flexDirection: "column",
             }}
           >
-            <div
-              style={{
-                pointerEvents: isReadOnly ? "none" : "auto",
-                position: "sticky",
-                opacity: isReadOnly ? 0.85 : 1,
-              }}
-            >
-              <ToolBarPlugins
-                level={props.level ?? ContentEditorLevel.Basic}
-                readOnly={props.readOnly}
-              />
-            </div>
-
-            <div
-              style={{
-                position: "relative",
-                flexGrow: 1,
-                padding: "15px 0px",
-                overflowY: "scroll",
-                overflowX: "auto",
-                minWidth: 0,
-              }}
-              onClickCapture={handleReadOnlyClickCapture}
-            >
-              <RichTextPlugin
-                ErrorBoundary={LexicalErrorBoundary}
-                contentEditable={
-                zIndex: 1000,
-                background: '#fff',
-                borderRadius: '2px',
-                width: props.width ?? '100%',
-                height: props.height ?? '100%',
-                margin: props.margin ?? '5px auto',
-                border: `1px solid ${
-                  hasRedBorder ? '#c4272c' : 'var(--colorNeutralStroke1, #ccced1)'
-                }`,
-                transition: 'border-color 0.2s',
-                display: 'flex',
-                flexDirection: 'column',
-              }}>
               <div
                 style={{
                   pointerEvents: isReadOnly ? 'none' : 'auto',
@@ -726,35 +617,6 @@ export const ContentEditorComponent = forwardRef<
                     <Stack className={css(EditorStyles.editorPlaceholder)}>{props.placeholder}</Stack>
                   }
                 />
-
-                {/* ── Word count: sticky to the bottom-right of the scroll area ── */}
-                {props.wordLimit !== undefined && (
-                  <div
-                    className="editor"
-                    style={{ height: "100%", position: "relative" }}
-                    ref={onAnchorRef}
-                  >
-                    <ContentEditable
-                      ref={contentEditableDomRef}
-                      className={css(EditorStyles.contentEditor)}
-                      style={{
-                        paddingTop:
-                          props.level !== ContentEditorLevel.None ? 0 : 10,
-                      }}
-                      // Disable browser's built-in spellcheck red squiggles when
-                      // our own SpellCheckPlugin is active — avoids double underlines.
-                      spellCheck={!resolvedSpellCheck}
-                      autoCorrect={resolvedSpellCheck ? "off" : undefined}
-                      autoCapitalize={resolvedSpellCheck ? "off" : undefined}
-                    />
-                  </div>
-                }
-                placeholder={
-                  <Stack className={css(EditorStyles.editorPlaceholder)}>
-                    {props.placeholder}
-                  </Stack>
-                }
-              />
 
               {/* ── Word count: sticky to the bottom-right of the scroll area ── */}
               {props.wordLimit !== undefined && (

@@ -2,6 +2,12 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.2.1] — 2026-07-03
+
+### Fixed
+- `ContentEditorComponent.tsx` had duplicated imports, state declarations (`pageSetup`, `pageCanvas`, `refErrors`, `EditorStyles`), and an unclosed/interleaved JSX return block left over from an unresolved merge conflict between the Page Setup work (1.2.0) and the `ax.bugFixes` branch — the package did not compile. The duplicated code has been removed and the missing `onAnchorRef` callback (needed for floating link/table UI anchoring) restored.
+- The example playground's HTML-preview `<div>` had duplicate `style` / `dangerouslySetInnerHTML` attributes from the same merge, which is invalid JSX.
+
 ## [1.0.9] — 2026-07-03
 
 ### Added
