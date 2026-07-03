@@ -1,14 +1,17 @@
 import { Stack } from '@fluentui/react';
 import {
   Button,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
   Dropdown,
   Field,
   Input,
   makeStyles,
   Option,
-  Popover,
-  PopoverSurface,
-  PopoverTrigger,
 } from '@fluentui/react-components';
 import { AttachFilled, ImageEditRegular } from '@fluentui/react-icons';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
@@ -64,13 +67,17 @@ const useStyles = makeStyles({
 export const InsertInlineImageDialog = ({
   disabled,
   activeEditor,
+  open: externalOpen,
+  onClose,
 }: {
   activeEditor: LexicalEditor;
   disabled: boolean;
+  open?: boolean;
+  onClose?: () => void;
 }): JSX.Element => {
   const hasModifier = useRef(false);
   const [src, setSrc] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [altText, setAltText] = useState('');
   const [fileName, setFileName] = useState('');
   const [position, setPosition] = useState<Position>('left');
@@ -78,7 +85,17 @@ export const InsertInlineImageDialog = ({
 
   const iconColor = disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#333333';
 
-  const isDisabled = disabled || src === '';
+  const isControlled = externalOpen !== undefined;
+  const isOpen = isControlled ? (!!externalOpen && !disabled) : (internalOpen && !disabled);
+  const isAddDisabled = disabled || src === '';
+
+  const handleClose = () => {
+    setSrc('');
+    setAltText('');
+    setFileName('');
+    if (isControlled) onClose?.();
+    else setInternalOpen(false);
+  };
 
   const loadImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
@@ -110,21 +127,12 @@ export const InsertInlineImageDialog = ({
     const payload = { altText, position, src };
     activeEditor.dispatchCommand(INSERT_INLINE_IMAGE_COMMAND, payload);
 
-    setIsOpen(false);
-    setAltText('');
-    setSrc('');
-    setFileName('');
+    handleClose();
   };
 
   return (
-    <Popover
-      trapFocus
-      withArrow
-      open={disabled ? false : isOpen}
-      onOpenChange={(_, data) => {
-        if (!disabled) setIsOpen(data.open);
-      }}>
-      <PopoverTrigger disableButtonEnhancement>
+    <>
+      {!isControlled && (
         <Button
           size='small'
           key='upload-inline-image'
@@ -140,102 +148,108 @@ export const InsertInlineImageDialog = ({
           }}
           onClick={() => {
             if (disabled) return;
-            setIsOpen((prev) => !prev);
-            setAltText('');
             setSrc('');
+            setAltText('');
             setFileName('');
+            setInternalOpen(true);
           }}
         />
-      </PopoverTrigger>
+      )}
 
-      <PopoverSurface
-        style={{
-          width: '400px',
-          opacity: disabled ? 0.6 : 1,
-          pointerEvents: disabled ? 'none' : 'auto',
+      <Dialog
+        open={isOpen}
+        onOpenChange={(_, data) => {
+          if (!data.open) handleClose();
         }}>
-        <Stack tokens={{ childrenGap: 6, padding: '10px 0px 0px 0px' }}>
-          <Field label='Upload' orientation='horizontal' size='small'>
-            <label
-              style={{
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                opacity: disabled ? 0.75 : 1,
-              }}>
-              <input
-                type='file'
-                accept='image/*'
-                key='inline-image-upload'
-                style={{ display: 'none' }}
-                disabled={disabled}
-                onChange={loadImage}
-              />
+        <DialogSurface style={{ maxWidth: '440px' }}>
+          <DialogBody>
+            <DialogTitle>Insert Inline Image</DialogTitle>
+            <DialogContent>
+              <Stack tokens={{ childrenGap: 10 }} style={{ paddingTop: 8 }}>
+                <Field label='Upload' orientation='horizontal' size='small'>
+                  <label
+                    style={{
+                      cursor: disabled ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      opacity: disabled ? 0.75 : 1,
+                    }}>
+                    <input
+                      type='file'
+                      accept='image/*'
+                      key='inline-image-upload'
+                      style={{ display: 'none' }}
+                      disabled={disabled}
+                      onChange={loadImage}
+                    />
 
-              <Stack horizontal>
-                <AttachFilled
-                  style={{
-                    fontSize: '16px',
-                    color: disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#808080',
-                    marginTop: 2,
-                  }}
-                />
-                {!fileName && <span style={{ fontSize: 12, color: '#808080' }}>Upload File</span>}
+                    <Stack horizontal>
+                      <AttachFilled
+                        style={{
+                          fontSize: '16px',
+                          color: disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#808080',
+                          marginTop: 2,
+                        }}
+                      />
+                      {!fileName && <span style={{ fontSize: 12, color: '#808080' }}>Upload File</span>}
+                    </Stack>
+
+                    {fileName && <span style={{ fontSize: 12, color: '#808080' }}>{fileName}</span>}
+                  </label>
+                </Field>
+
+                <Field label='Position' orientation='horizontal' size='small'>
+                  <Dropdown
+                    placeholder='Left Align'
+                    className={styles.alignDropdown}
+                    disabled={disabled}
+                    listbox={{ style: { width: '120px' } }}
+                    root={{ style: { borderBottom: '1px solid black' } }}>
+                    <Option key='full' text='full' onClick={() => setPosition('full')}>
+                      Full
+                    </Option>
+                    <Option key='left' text='left' onClick={() => setPosition('left')}>
+                      Left
+                    </Option>
+                    <Option key='right' text='right' onClick={() => setPosition('right')}>
+                      Right
+                    </Option>
+                  </Dropdown>
+                </Field>
+
+                <Field label='Alt Text' orientation='horizontal' size='small'>
+                  <Input
+                    placeholder='Alt text'
+                    appearance='underline'
+                    disabled={disabled}
+                    value={altText}
+                    onChange={(_, d) => setAltText(d.value)}
+                  />
+                </Field>
               </Stack>
-
-              {fileName && <span style={{ fontSize: 12, color: '#808080' }}>{fileName}</span>}
-            </label>
-          </Field>
-
-          <Field label='Position' orientation='horizontal' size='small'>
-            <Dropdown
-              placeholder='Left Align'
-              className={styles.alignDropdown}
-              disabled={disabled}
-              listbox={{ style: { width: '120px' } }}
-              root={{ style: { borderBottom: '1px solid black' } }}>
-              <Option key='full' text='full' onClick={() => setPosition('full')}>
-                Full
-              </Option>
-              <Option key='left' text='left' onClick={() => setPosition('left')}>
-                Left
-              </Option>
-              <Option key='right' text='right' onClick={() => setPosition('right')}>
-                Right
-              </Option>
-            </Dropdown>
-          </Field>
-
-          <Field label='Alt Text' orientation='horizontal' size='small'>
-            <Input
-              placeholder='Alt text'
-              appearance='underline'
-              disabled={disabled}
-              value={altText}
-              onChange={(_, d) => setAltText(d.value)}
-            />
-          </Field>
-
-          <Stack horizontal horizontalAlign='end' tokens={{ childrenGap: 6 }}>
-            <Button
-              size='small'
-              key='file-inline-upload-btn'
-              disabled={isDisabled}
-              onClick={handleOnClick}>
-              Add
-            </Button>
-            <Button
-              size='small'
-              key='file-inline-upload-cancel'
-              disabled={disabled}
-              onClick={() => setIsOpen(false)}>
-              Cancel
-            </Button>
-          </Stack>
-        </Stack>
-      </PopoverSurface>
-    </Popover>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                appearance='primary'
+                size='small'
+                key='file-inline-upload-btn'
+                disabled={isAddDisabled}
+                onClick={handleOnClick}>
+                Add
+              </Button>
+              <Button
+                size='small'
+                key='file-inline-upload-cancel'
+                disabled={disabled}
+                onClick={handleClose}>
+                Cancel
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+    </>
   );
 };
 

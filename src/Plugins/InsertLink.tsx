@@ -1,11 +1,14 @@
 import { Stack } from '@fluentui/react';
 import {
   Button,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
   Field,
   Input,
-  Popover,
-  PopoverSurface,
-  PopoverTrigger,
 } from '@fluentui/react-components';
 import { LinkAddRegular } from '@fluentui/react-icons';
 import { $createLinkNode } from '@lexical/link';
@@ -13,42 +16,70 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { $getSelection, $isRangeSelection, TextNode } from 'lexical';
 import { useState } from 'react';
 
-export const InsertLinkPlugin = ({ disabled }: { disabled: boolean }) => {
+/** Schemes/paths that must be inserted verbatim, never auto-prefixed with `https://`. */
+const VERBATIM_LINK_RE = /^https?:\/\/|^mailto:|^tel:|^#|^\//i;
+
+/** Returns an inline validation message if the URL looks structurally invalid, otherwise undefined. */
+function getLinkValidationMessage(raw: string): string | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  if (/\s/.test(trimmed)) return 'URL cannot contain spaces';
+  if (!VERBATIM_LINK_RE.test(trimmed) && !trimmed.includes('.')) {
+    return 'Enter a valid URL (e.g. example.com)';
+  }
+  return undefined;
+}
+
+export const InsertLinkPlugin = ({
+  disabled,
+  open: externalOpen,
+  onClose,
+}: {
+  disabled: boolean;
+  open?: boolean;
+  onClose?: () => void;
+}) => {
   const [editor] = useLexicalComposerContext();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [text, setText] = useState('');
   const [link, setLink] = useState('');
 
   const iconColor = disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#333333';
 
+  const isControlled = externalOpen !== undefined;
+  const isOpen = isControlled ? (!!externalOpen && !disabled) : (internalOpen && !disabled);
+  const linkError = getLinkValidationMessage(link);
+
+  const handleClose = () => {
+    setText('');
+    setLink('');
+    if (isControlled) onClose?.();
+    else setInternalOpen(false);
+  };
+
   const insertLink = (text: string, link: string) => {
     if (disabled) return;
+    if (getLinkValidationMessage(link)) return;
+
+    const trimmedLink = link.trim();
+    const href = VERBATIM_LINK_RE.test(trimmedLink) ? trimmedLink : `https://${trimmedLink}`;
 
     editor.update(() => {
-      setText('');
-      setLink('');
-
       const selection = $getSelection();
       if ($isRangeSelection(selection)) {
         const textNode = new TextNode(text);
-        const linkNode = $createLinkNode(link.startsWith('http') ? link : `https://${link}`);
+        const linkNode = $createLinkNode(href);
         linkNode.append(textNode);
         selection.insertNodes([linkNode]);
       }
-
-      setIsOpen(false);
     });
+
+    handleClose();
   };
 
   return (
-    <Popover
-      trapFocus
-      withArrow
-      open={disabled ? false : isOpen}
-      onOpenChange={(_, data) => {
-        if (!disabled) setIsOpen(data.open);
-      }}>
-      <PopoverTrigger disableButtonEnhancement>
+    <>
+      {!isControlled && (
         <Button
           size='small'
           title='Add link'
@@ -63,52 +94,67 @@ export const InsertLinkPlugin = ({ disabled }: { disabled: boolean }) => {
             cursor: disabled ? 'not-allowed' : 'pointer',
           }}
           onClick={() => {
-            if (!disabled) setIsOpen((prev) => !prev);
+            if (disabled) return;
+            setInternalOpen((prev) => !prev);
           }}
         />
-      </PopoverTrigger>
+      )}
 
-      <PopoverSurface
-        style={{
-          width: '270px',
-          opacity: disabled ? 0.6 : 1,
-          pointerEvents: disabled ? 'none' : 'auto',
+      <Dialog
+        open={isOpen}
+        onOpenChange={(_, data) => {
+          if (!data.open) handleClose();
         }}>
-        <Stack tokens={{ childrenGap: 10 }}>
-          <Field label='Text' orientation='horizontal' size='small'>
-            <Input
-              autoFocus={!disabled}
-              value={text}
-              appearance='underline'
-              placeholder='Text'
-              disabled={disabled}
-              onChange={(_, v) => setText(v.value)}
-            />
-          </Field>
+        <DialogSurface style={{ maxWidth: '380px' }}>
+          <DialogBody>
+            <DialogTitle>Insert Link</DialogTitle>
+            <DialogContent>
+              <Stack tokens={{ childrenGap: 10 }} style={{ paddingTop: 8 }}>
+                <Field label='Text' orientation='horizontal' size='small'>
+                  <Input
+                    autoFocus={!disabled}
+                    value={text}
+                    appearance='underline'
+                    placeholder='Text'
+                    disabled={disabled}
+                    onChange={(_, v) => setText(v.value)}
+                  />
+                </Field>
 
-          <Field label='Link' orientation='horizontal' size='small'>
-            <Input
-              value={link}
-              appearance='underline'
-              placeholder='Link'
-              disabled={disabled}
-              onChange={(_, v) => setLink(v.value)}
-            />
-          </Field>
-
-          <Stack horizontal horizontalAlign='end' tokens={{ childrenGap: 6 }}>
-            <Button
-              size='small'
-              disabled={disabled || !text || !link}
-              onClick={() => insertLink(text, link)}>
-              Add
-            </Button>
-            <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
-              Cancel
-            </Button>
-          </Stack>
-        </Stack>
-      </PopoverSurface>
-    </Popover>
+                <Field
+                  label='Link'
+                  orientation='horizontal'
+                  size='small'
+                  validationState={linkError ? 'error' : 'none'}
+                  validationMessage={linkError}>
+                  <Input
+                    value={link}
+                    appearance='underline'
+                    placeholder='Link'
+                    disabled={disabled}
+                    onChange={(_, v) => setLink(v.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && text && link && !linkError) insertLink(text, link);
+                    }}
+                  />
+                </Field>
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                appearance='primary'
+                size='small'
+                disabled={disabled || !text || !link || !!linkError}
+                onClick={() => insertLink(text, link)}>
+                Add
+              </Button>
+              <Button size='small' disabled={disabled} onClick={handleClose}>
+                Cancel
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+    </>
   );
 };

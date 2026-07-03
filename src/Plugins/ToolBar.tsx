@@ -3,13 +3,22 @@ import {
   Button,
   Dropdown,
   makeStyles,
+  Menu,
+  MenuItem,
+  MenuList,
+  MenuPopover,
+  MenuTrigger,
   Option,
   ToolbarDivider,
 } from '@fluentui/react-components';
 import {
+  AddRegular,
   CommentQuoteRegular,
   DocumentPageBreakRegular,
   HighlightAccentFilled,
+  ImageAddRegular,
+  ImageEditRegular,
+  TableAddRegular,
   TextAlignCenterFilled,
   TextAlignJustifyFilled,
   TextAlignLeftFilled,
@@ -25,6 +34,7 @@ import {
   TextSubscriptFilled,
   TextSuperscriptFilled,
   TextUnderlineFilled,
+  VideoClipRegular,
 } from '@fluentui/react-icons';
 import {
   $isListNode,
@@ -87,6 +97,8 @@ const useStyles = makeStyles({
   },
 });
 
+type ActiveInsertDialog = 'table' | 'image' | 'inlineImage' | 'youtube' | null;
+
 /**
  * Toolbar token type = strings you already use in enabledPlugins.
  */
@@ -101,6 +113,7 @@ type ToolbarToken =
   | 'Image'
   | 'InlineImage'
   | 'Youtube'
+  | 'Insert'
   | 'Heading'
   | 'FontFamily'
   | 'FontSize'
@@ -120,6 +133,7 @@ const ALLOWED_TOKENS: Record<ToolbarToken, true> = {
   Image: true,
   InlineImage: true,
   Youtube: true,
+  Insert: true,
   Heading: true,
   FontFamily: true,
   FontSize: true,
@@ -162,6 +176,7 @@ export const ToolBarPlugins = (props: IEditorProps) => {
   const [isLowercase, setIsLowercase] = useState(false);
   const [isCapitalize, setIsCapitalize] = useState(false);
   const [alignment, setAlignment] = useState<string>('left');
+  const [activeInsertDialog, setActiveInsertDialog] = useState<ActiveInsertDialog>(null);
   const lastSelectionRef = React.useRef<RangeSelection | null>(null);
 
   const presetGroups = getToolbarGroupsByLevel(props.level);
@@ -424,6 +439,8 @@ export const ToolBarPlugins = (props: IEditorProps) => {
       verticalAlign: 'middle',
     };
 
+    const isDisabled = !isEditable || !!props.readOnly;
+
     switch (token) {
       case 'Bold':
         return (
@@ -490,6 +507,76 @@ export const ToolBarPlugins = (props: IEditorProps) => {
 
       case 'Youtube':
         return <YoutubeUploadPlugin key={key} disabled={!isEditable || props.readOnly!} />;
+
+      case 'Insert': {
+        const menuIconColor = isDisabled ? fgDisabled : fg;
+        return (
+          <React.Fragment key={key}>
+            <Menu>
+              <MenuTrigger disableButtonEnhancement>
+                <Button
+                  size='small'
+                  disabled={isDisabled}
+                  icon={<AddRegular style={{ color: menuIconColor }} />}
+                  style={{
+                    ...getButtonStyle(false),
+                    gap: 4,
+                    paddingInline: 8,
+                  }}>
+                  Insert
+                </Button>
+              </MenuTrigger>
+              <MenuPopover>
+                <MenuList>
+                  <MenuItem
+                    icon={<TableAddRegular style={{ color: menuIconColor }} />}
+                    onClick={() => !isDisabled && setActiveInsertDialog('table')}>
+                    Table
+                  </MenuItem>
+                  <MenuItem
+                    icon={<ImageAddRegular style={{ color: menuIconColor }} />}
+                    onClick={() => !isDisabled && setActiveInsertDialog('image')}>
+                    Image
+                  </MenuItem>
+                  <MenuItem
+                    icon={<ImageEditRegular style={{ color: menuIconColor }} />}
+                    onClick={() => !isDisabled && setActiveInsertDialog('inlineImage')}>
+                    Inline Image
+                  </MenuItem>
+                  <MenuItem
+                    icon={<VideoClipRegular style={{ color: menuIconColor }} />}
+                    onClick={() => !isDisabled && setActiveInsertDialog('youtube')}>
+                    YouTube
+                  </MenuItem>
+                </MenuList>
+              </MenuPopover>
+            </Menu>
+
+            <TableItemPlugin
+              disabled={isDisabled}
+              open={activeInsertDialog === 'table'}
+              onClose={() => setActiveInsertDialog(null)}
+            />
+            <InsertImageDialog
+              activeEditor={editor}
+              disabled={isDisabled}
+              open={activeInsertDialog === 'image'}
+              onClose={() => setActiveInsertDialog(null)}
+            />
+            <InsertInlineImageDialog
+              activeEditor={editor}
+              disabled={isDisabled}
+              open={activeInsertDialog === 'inlineImage'}
+              onClose={() => setActiveInsertDialog(null)}
+            />
+            <YoutubeUploadPlugin
+              disabled={isDisabled}
+              open={activeInsertDialog === 'youtube'}
+              onClose={() => setActiveInsertDialog(null)}
+            />
+          </React.Fragment>
+        );
+      }
 
       case 'Heading': {
         const headingLabel =

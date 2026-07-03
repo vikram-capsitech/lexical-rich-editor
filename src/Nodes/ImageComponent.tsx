@@ -366,7 +366,6 @@ const ImageComponent =({src,altText,nodeKey,width, height,maxWidth, resizable, s
             editor={editor}
             buttonRef={buttonRef}
             imageRef={imageRef}
-            maxWidth={maxWidth}
             onResizeStart={onResizeStart}
             onResizeEnd={onResizeEnd}
             captionsEnabled={!isLoadError && captionsEnabled}
