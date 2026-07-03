@@ -1,13 +1,6 @@
 import { Stack } from '@fluentui/react';
 import {
   Button,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  DialogTrigger,
   Dropdown,
   Field,
   Input,
@@ -16,6 +9,7 @@ import {
   MessageBarBody,
   Option,
 } from '@fluentui/react-components';
+import { AoModal } from './AoModal';
 import { DEFAULT_VALIDATION_MESSAGES } from '../ContentEditorComponent.types';
 import type { ValidationMessages } from '../ContentEditorComponent.types';
 import { AttachFilled, ImageEditRegular } from '@fluentui/react-icons';
@@ -151,106 +145,36 @@ export const InsertInlineImageDialog = ({
   };
 
   return (
-    <Dialog
-      open={disabled ? false : isOpen}
-      onOpenChange={(_, data) => {
-        if (!disabled) setIsOpen(data.open);
-      }}>
-      <DialogTrigger disableButtonEnhancement>
-        <Button
-          size='small'
-          key='upload-inline-image'
-          title='Add Inline Image'
-          disabled={disabled}
-          icon={<ImageEditRegular style={{ color: iconColor }} />}
-          style={{
-            background: isOpen && !disabled ? '#ebebeb' : 'none',
-            border: 'none',
-            margin: 2,
-            opacity: disabled ? 0.55 : 1,
-            cursor: disabled ? 'not-allowed' : 'pointer',
-          }}
-          onClick={() => {
-            if (disabled) return;
-            setIsOpen((prev) => !prev);
-            setAltText('');
-            setSrc('');
-            setFileName('');
-          }}
-        />
-      </DialogTrigger>
+    <>
+      <Button
+        size='small'
+        key='upload-inline-image'
+        title='Add Inline Image'
+        disabled={disabled}
+        icon={<ImageEditRegular style={{ color: iconColor }} />}
+        style={{
+          background: isOpen && !disabled ? '#ebebeb' : 'none',
+          border: 'none',
+          margin: 2,
+          opacity: disabled ? 0.55 : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
+        onClick={() => {
+          if (disabled) return;
+          setIsOpen((prev) => !prev);
+          setAltText('');
+          setSrc('');
+          setFileName('');
+        }}
+      />
 
-      <DialogSurface style={{ maxWidth: 360 }}>
-        <DialogBody>
-          <DialogTitle>Insert inline image</DialogTitle>
-          <DialogContent>
-            <Stack tokens={{ childrenGap: 8 }}>
-              <Field label='Upload' size='small'>
-                <label
-                  style={{
-                    cursor: disabled ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    opacity: disabled ? 0.75 : 1,
-                  }}>
-                  <input
-                    type='file'
-                    accept='image/*'
-                    key='inline-image-upload'
-                    style={{ display: 'none' }}
-                    disabled={disabled}
-                    onChange={loadImage}
-                  />
-
-                  <Stack horizontal>
-                    <AttachFilled
-                      style={{
-                        fontSize: '16px',
-                        color: disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#808080',
-                        marginTop: 2,
-                      }}
-                    />
-                    {!fileName && <span style={{ fontSize: 12, color: '#808080' }}>Upload File</span>}
-                  </Stack>
-
-                  {fileName && <span style={{ fontSize: 12, color: '#808080' }}>{fileName}</span>}
-                </label>
-              </Field>
-
-              <Field label='Position' size='small'>
-                <Dropdown
-                  className={styles.alignDropdown}
-                  disabled={disabled}
-                  value={position === 'full' ? 'Full' : position === 'right' ? 'Right' : 'Left'}
-                  selectedOptions={[position ?? 'left']}
-                  listbox={{ style: { width: '120px' } }}
-                  root={{ style: { borderBottom: '1px solid black' } }}
-                  onOptionSelect={(_, data) => setPosition(data.optionValue as Position)}>
-                  <Option key='left' value='left'>Left</Option>
-                  <Option key='right' value='right'>Right</Option>
-                  <Option key='full' value='full'>Full</Option>
-                </Dropdown>
-              </Field>
-
-              {fileSizeError && (
-                <MessageBar intent='error' style={{ marginTop: 4 }}>
-                  <MessageBarBody>{fileSizeError}</MessageBarBody>
-                </MessageBar>
-              )}
-
-              <Field label='Alt Text' size='small'>
-                <Input
-                  placeholder='Alt text'
-                  appearance='underline'
-                  disabled={disabled}
-                  value={altText}
-                  onChange={(_, d) => setAltText(d.value)}
-                />
-              </Field>
-            </Stack>
-          </DialogContent>
-          <DialogActions>
+      <AoModal
+        isOpen={disabled ? false : isOpen}
+        onDismiss={() => !disabled && setIsOpen(false)}
+        title='Insert inline image'
+        maxWidth={360}
+        actions={
+          <>
             <Button
               size='small'
               key='file-inline-upload-btn'
@@ -265,10 +189,75 @@ export const InsertInlineImageDialog = ({
               onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
+          </>
+        }>
+        <Stack tokens={{ childrenGap: 8 }}>
+          <Field label='Upload' size='small'>
+            <label
+              style={{
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                opacity: disabled ? 0.75 : 1,
+              }}>
+              <input
+                type='file'
+                accept='image/*'
+                key='inline-image-upload'
+                style={{ display: 'none' }}
+                disabled={disabled}
+                onChange={loadImage}
+              />
+
+              <Stack horizontal>
+                <AttachFilled
+                  style={{
+                    fontSize: '16px',
+                    color: disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#808080',
+                    marginTop: 2,
+                  }}
+                />
+                {!fileName && <span style={{ fontSize: 12, color: '#808080' }}>Upload File</span>}
+              </Stack>
+
+              {fileName && <span style={{ fontSize: 12, color: '#808080' }}>{fileName}</span>}
+            </label>
+          </Field>
+
+          <Field label='Position' size='small'>
+            <Dropdown
+              className={styles.alignDropdown}
+              disabled={disabled}
+              value={position === 'full' ? 'Full' : position === 'right' ? 'Right' : 'Left'}
+              selectedOptions={[position ?? 'left']}
+              listbox={{ style: { width: '120px' } }}
+              root={{ style: { borderBottom: '1px solid black' } }}
+              onOptionSelect={(_, data) => setPosition(data.optionValue as Position)}>
+              <Option key='left' value='left'>Left</Option>
+              <Option key='right' value='right'>Right</Option>
+              <Option key='full' value='full'>Full</Option>
+            </Dropdown>
+          </Field>
+
+          {fileSizeError && (
+            <MessageBar intent='error' style={{ marginTop: 4 }}>
+              <MessageBarBody>{fileSizeError}</MessageBarBody>
+            </MessageBar>
+          )}
+
+          <Field label='Alt Text' size='small'>
+            <Input
+              placeholder='Alt text'
+              appearance='underline'
+              disabled={disabled}
+              value={altText}
+              onChange={(_, d) => setAltText(d.value)}
+            />
+          </Field>
+        </Stack>
+      </AoModal>
+    </>
   );
 };
 

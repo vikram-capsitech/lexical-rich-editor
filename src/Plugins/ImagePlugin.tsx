@@ -1,13 +1,6 @@
 import { Stack } from '@fluentui/react';
 import {
   Button,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  DialogTrigger,
   Field,
   Input,
   MessageBar,
@@ -15,6 +8,7 @@ import {
   SelectTabData,
   SelectTabEvent,
 } from '@fluentui/react-components';
+import { AoModal } from './AoModal';
 import { DEFAULT_VALIDATION_MESSAGES } from '../ContentEditorComponent.types';
 import type { ValidationMessages } from '../ContentEditorComponent.types';
 import { AttachFilled, ImageAddRegular } from '@fluentui/react-icons';
@@ -214,109 +208,104 @@ export const InsertImageDialog = ({
   };
 
   return (
-    <Dialog
-      open={disabled ? false : isOpen}
-      onOpenChange={(_, data) => {
-        if (!disabled) setIsOpen(data.open);
-      }}>
-      <DialogTrigger disableButtonEnhancement>
-        <Button
-          size='small'
-          title='Add Image'
-          key='upload-image'
-          disabled={disabled}
-          icon={<ImageAddRegular style={{ color: iconColor }} />}
-          style={{
-            background: isOpen && !disabled ? '#ebebeb' : 'none',
-            border: 'none',
-            margin: 2,
-            opacity: disabled ? 0.55 : 1,
-            cursor: disabled ? 'not-allowed' : 'pointer',
-          }}
-          onClick={() => {
-            if (disabled) return;
-            setIsOpen((prev) => !prev);
-            setSrc('');
-            setAltText('');
-            setFileName('');
-          }}
-        />
-      </DialogTrigger>
+    <>
+      <Button
+        size='small'
+        title='Add Image'
+        key='upload-image'
+        disabled={disabled}
+        icon={<ImageAddRegular style={{ color: iconColor }} />}
+        style={{
+          background: isOpen && !disabled ? '#ebebeb' : 'none',
+          border: 'none',
+          margin: 2,
+          opacity: disabled ? 0.55 : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
+        onClick={() => {
+          if (disabled) return;
+          setIsOpen((prev) => !prev);
+          setSrc('');
+          setAltText('');
+          setFileName('');
+        }}
+      />
 
-      <DialogSurface style={{ maxWidth: 340 }}>
-        <DialogBody>
-          <DialogTitle>Insert image</DialogTitle>
-          <DialogContent>
-            <Stack tokens={{ childrenGap: 8 }}>
-              <Field label='Upload' size='small'>
-                <label
-                  style={{
-                    cursor: disabled ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    opacity: disabled ? 0.75 : 1,
-                  }}>
-                  <input
-                    type='file'
-                    accept='image/*'
-                    key='inline-image-upload'
-                    style={{ display: 'none' }}
-                    disabled={disabled}
-                    onChange={loadImage}
-                  />
-
-                  <Stack horizontal>
-                    <AttachFilled
-                      style={{
-                        fontSize: '16px',
-                        color: disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#808080',
-                        marginTop: 2,
-                      }}
-                    />
-                    {!fileName && <span style={{ fontSize: 12, color: '#808080' }}>Upload File</span>}
-                  </Stack>
-
-                  {fileName && <span style={{ fontSize: 12, color: '#808080' }}>{fileName}</span>}
-                </label>
-              </Field>
-
-              {fileSizeError && (
-                <MessageBar intent='error' style={{ marginTop: 4 }}>
-                  <MessageBarBody>{fileSizeError}</MessageBarBody>
-                </MessageBar>
-              )}
-
-              <Field label='Alt Text' size='small'>
-                <Input
-                  placeholder='Alt text'
-                  appearance='underline'
-                  disabled={disabled}
-                  onChange={(_, d) => setAltText(d.value)}
-                  value={altText}
-                />
-              </Field>
-
-              {selectedValue === 'URL' && (
-                <InsertImageByURL
-                  disabled={disabled}
-                  setIsOpen={(open) => setIsOpen(open)}
-                  onClick={(payload) => onClick(payload)}
-                />
-              )}
-            </Stack>
-          </DialogContent>
-          <DialogActions>
+      <AoModal
+        isOpen={disabled ? false : isOpen}
+        onDismiss={() => !disabled && setIsOpen(false)}
+        title='Insert image'
+        maxWidth={340}
+        actions={
+          <>
             <Button size='small' disabled={isDisabled} onClick={() => onClick({ altText, src })}>
               Add
             </Button>
             <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
+          </>
+        }>
+        <Stack tokens={{ childrenGap: 8 }}>
+          <Field label='Upload' size='small'>
+            <label
+              style={{
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                opacity: disabled ? 0.75 : 1,
+              }}>
+              <input
+                type='file'
+                accept='image/*'
+                key='inline-image-upload'
+                style={{ display: 'none' }}
+                disabled={disabled}
+                onChange={loadImage}
+              />
+
+              <Stack horizontal>
+                <AttachFilled
+                  style={{
+                    fontSize: '16px',
+                    color: disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#808080',
+                    marginTop: 2,
+                  }}
+                />
+                {!fileName && <span style={{ fontSize: 12, color: '#808080' }}>Upload File</span>}
+              </Stack>
+
+              {fileName && <span style={{ fontSize: 12, color: '#808080' }}>{fileName}</span>}
+            </label>
+          </Field>
+
+          {fileSizeError && (
+            <MessageBar intent='error' style={{ marginTop: 4 }}>
+              <MessageBarBody>{fileSizeError}</MessageBarBody>
+            </MessageBar>
+          )}
+
+          <Field label='Alt Text' size='small'>
+            <Input
+              placeholder='Alt text'
+              appearance='underline'
+              disabled={disabled}
+              onChange={(_, d) => setAltText(d.value)}
+              value={altText}
+            />
+          </Field>
+
+          {selectedValue === 'URL' && (
+            <InsertImageByURL
+              disabled={disabled}
+              setIsOpen={(open) => setIsOpen(open)}
+              onClick={(payload) => onClick(payload)}
+            />
+          )}
+        </Stack>
+      </AoModal>
+    </>
   );
 };
 

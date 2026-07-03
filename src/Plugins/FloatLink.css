@@ -1,9 +1,10 @@
 .aoLinkEditor {
   display: flex;
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   z-index: 10000010;
+  pointer-events: auto;
   max-width: 400px;
   width: max-content;
   opacity: 0;
@@ -16,7 +17,6 @@
     0 10px 30px rgba(0, 0, 0, 0.14),
     0 2px 10px rgba(0, 0, 0, 0.08);
   transition: opacity 120ms ease;
-  will-change: transform;
 }
 
 .aoLinkInput {

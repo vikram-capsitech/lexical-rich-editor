@@ -1,21 +1,11 @@
 import { Stack } from '@fluentui/react';
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  DialogTrigger,
-  Field,
-  Input,
-} from '@fluentui/react-components';
+import { Button, Field, Input } from '@fluentui/react-components';
 import { TableAddRegular } from '@fluentui/react-icons';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $createTableNodeWithDimensions } from '@lexical/table';
 import { $insertNodeToNearestRoot } from '@lexical/utils';
 import { useState } from 'react';
+import { AoModal } from './AoModal';
 
 export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
   const [editor] = useLexicalComposerContext();
@@ -43,63 +33,36 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
   };
 
   return (
-    <Dialog
-      open={disabled ? false : isOpen}
-      onOpenChange={(_, data) => {
-        if (!disabled) setIsOpen(data.open);
-      }}>
-      <DialogTrigger disableButtonEnhancement>
-        <Button
-          size='small'
-          title='Add table'
-          disabled={disabled}
-          key='insert-table-nodes'
-          icon={<TableAddRegular style={{ color: iconColor }} />}
-          style={{
-            background: isOpen && !disabled ? '#ebebeb' : 'none',
-            border: 'none',
+    <>
+      <Button
+        size='small'
+        title='Add table'
+        disabled={disabled}
+        key='insert-table-nodes'
+        icon={<TableAddRegular style={{ color: iconColor }} />}
+        style={{
+          background: isOpen && !disabled ? '#ebebeb' : 'none',
+          border: 'none',
 
-            margin: 2,
-            opacity: disabled ? 0.55 : 1,
-            cursor: disabled ? 'not-allowed' : 'pointer',
-          }}
-          onClick={() => {
-            if (disabled) return;
-            setIsOpen((prev) => !prev);
-            setRows('');
-            setColumns('');
-          }}
-        />
-      </DialogTrigger>
+          margin: 2,
+          opacity: disabled ? 0.55 : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
+        onClick={() => {
+          if (disabled) return;
+          setIsOpen((prev) => !prev);
+          setRows('');
+          setColumns('');
+        }}
+      />
 
-      <DialogSurface style={{ maxWidth: 300 }}>
-        <DialogBody>
-          <DialogTitle>Insert table</DialogTitle>
-          <DialogContent>
-            <Stack tokens={{ childrenGap: 8 }}>
-              <Field label='Rows' size='small'>
-                <Input
-                  autoFocus={!disabled}
-                  value={rows}
-                  placeholder='Rows'
-                  appearance='underline'
-                  disabled={disabled}
-                  onChange={(_, v) => setRows(v.value)}
-                />
-              </Field>
-
-              <Field label='Columns' size='small'>
-                <Input
-                  value={columns}
-                  placeholder='Columns'
-                  appearance='underline'
-                  disabled={disabled}
-                  onChange={(_, v) => setColumns(v.value)}
-                />
-              </Field>
-            </Stack>
-          </DialogContent>
-          <DialogActions>
+      <AoModal
+        isOpen={disabled ? false : isOpen}
+        onDismiss={() => !disabled && setIsOpen(false)}
+        title='Insert table'
+        maxWidth={300}
+        actions={
+          <>
             <Button
               size='small'
               appearance='primary'
@@ -111,9 +74,31 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
             <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
+          </>
+        }>
+        <Stack tokens={{ childrenGap: 8 }}>
+          <Field label='Rows' size='small'>
+            <Input
+              autoFocus={!disabled}
+              value={rows}
+              placeholder='Rows'
+              appearance='underline'
+              disabled={disabled}
+              onChange={(_, v) => setRows(v.value)}
+            />
+          </Field>
+
+          <Field label='Columns' size='small'>
+            <Input
+              value={columns}
+              placeholder='Columns'
+              appearance='underline'
+              disabled={disabled}
+              onChange={(_, v) => setColumns(v.value)}
+            />
+          </Field>
+        </Stack>
+      </AoModal>
+    </>
   );
 };

@@ -1,0 +1,44 @@
+.aoModalContainer {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.aoModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 8px 16px;
+}
+
+.aoModalTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #242424;
+}
+
+.aoModalClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #616161;
+  flex: 0 0 auto;
+}
+
+.aoModalClose:hover {
+  background-color: #f0f0f0;
+}
+
+.aoModalBody {
+  padding: 8px 16px 16px 16px;
+}
+
+.aoModalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 16px 16px 16px;
+}
