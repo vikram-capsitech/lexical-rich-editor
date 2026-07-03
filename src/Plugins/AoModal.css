@@ -1,44 +1,89 @@
+.aoModalBackdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(2px);
+  border-radius: 8px;
+}
+
 .aoModalContainer {
   border-radius: 8px;
-  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.aoModalWrapper {
+  display: flex;
+  flex-direction: column;
 }
 
 .aoModalHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 8px 16px;
+  padding: 10px 12px 2px 12px;
+  border-radius: 8px 8px 0 0;
 }
 
 .aoModalTitle {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   font-size: 16px;
+  /* A little bit bigger, cleaner typography */
   font-weight: 600;
   color: #242424;
+  margin: 0;
+  line-height: 24px;
 }
 
-.aoModalClose {
+.aoModalCloseButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #616161;
+  font-size: 14px;
+  font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 4px;
-  cursor: pointer;
-  color: #616161;
-  flex: 0 0 auto;
+  transition: background-color 0.15s, color 0.15s;
+  padding: 0;
 }
 
-.aoModalClose:hover {
+.aoModalCloseButton:hover {
   background-color: #f0f0f0;
+  color: #242424;
+}
+
+.aoModalCloseButton:active {
+  background-color: #e0e0e0;
 }
 
 .aoModalBody {
-  padding: 8px 16px 16px 16px;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  font-size: 13px;
+  color: #323130;
+  padding: 6px 12px 10px 12px;
+  /* Tightened layout for small modal */
 }
 
 .aoModalActions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 8px 16px 16px 16px;
+  padding: 8px 12px 10px 12px;
+  /* Tightened layout */
+  background-color: #fafafa;
+  border-top: 1px solid #f0f0f0;
+  border-radius: 0 0 8px 8px;
 }

@@ -422,8 +422,13 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
         color: "var(--colorNeutralForeground3, grey)",
         position: "absolute",
         top: props.level !== ContentEditorLevel.None ? "17px" : "27px",
-        left: pageCanvas.paddingPx,
-        right: pageCanvas.paddingPx,
+        left: 0,
+        right: 0,
+        maxWidth: pageCanvas.widthPx,
+        marginLeft: pageCanvas.widthPx !== undefined ? "auto" : undefined,
+        marginRight: pageCanvas.widthPx !== undefined ? "auto" : undefined,
+        paddingLeft: pageCanvas.paddingPx,
+        paddingRight: pageCanvas.paddingPx,
         fontSize: "14px",
         pointerEvents: "none",
         userSelect: "none",
@@ -574,7 +579,7 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
     return (
       <FluentProvider theme={webLightTheme} style={{ height: '100%' }}>
         <LexicalComposer initialConfig={initialConfig}>
-          <div ref={containerRef} className='lexical-rich-editor-root' style={{ height: '100%' }}>
+          <div ref={containerRef} className='lexical-rich-editor-root' style={{ height: '100%', position: 'relative' }}>
             <Stack
               style={{
                 zIndex: 1000,

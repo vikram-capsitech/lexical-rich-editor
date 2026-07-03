@@ -208,6 +208,7 @@ export const ToolBarPlugins = (props: IEditorProps) => {
   const [isLowercase, setIsLowercase] = useState(false);
   const [isCapitalize, setIsCapitalize] = useState(false);
   const [alignment, setAlignment] = useState<string>('left');
+  const [hasTextSelection, setHasTextSelection] = useState(false);
 
   // Controlled open state for the decorator dropdown so it stays open
   // after an option is selected (only closes on click-outside / Escape).
@@ -234,8 +235,11 @@ export const ToolBarPlugins = (props: IEditorProps) => {
       setIsLowercase(false);
       setIsCapitalize(false);
       setSelectNodeType('paragraph');
+      setHasTextSelection(false);
       return;
     }
+
+    setHasTextSelection(!selection.isCollapsed());
 
     setIsBold(selection.hasFormat('bold'));
     setIsItalic(selection.hasFormat('italic'));
@@ -581,7 +585,7 @@ export const ToolBarPlugins = (props: IEditorProps) => {
         return (
           <InsertLinkPlugin
             key={key}
-            disabled={!isEditable || props.readOnly!}
+            disabled={!isEditable || props.readOnly! || !hasTextSelection}
             setIsLinkEditMode={props.setIsLinkEditMode}
           />
         );
