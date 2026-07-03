@@ -155,7 +155,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
         setFloatingElemPositionForLinkEditor(domRect, editorElem, anchorElem);
       }
       setLastSelection(selection);
-    } else if (!activeElement || activeElement.className !== 'link-input') {
+    } else if (!activeElement || activeElement.className !== 'aoLinkInput') {
       if (rootElement !== null) {
         setFloatingElemPositionForLinkEditor(null, editorElem, anchorElem);
       }
@@ -277,12 +277,12 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
   };
 
   return (
-    <div ref={editorRef} className="link-editor">
+    <div ref={editorRef} className="aoLinkEditor">
       {!isLink ? null : isLinkEditMode ? (
         <>
           <input
             ref={inputRef}
-            className="link-input"
+            className="aoLinkInput"
             value={editedLinkUrl}
             onChange={(event) => {
               setEditedLinkUrl(event.target.value);
@@ -291,9 +291,9 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
               monitorInputInteraction(event);
             }}
           />
-          <div className="link-input-actions">
+          <div className="aoLinkInputActions">
             <div
-              className="link-cancel"
+              className="aoLinkCancel"
               role="button"
               tabIndex={0}
               title="Cancel"
@@ -306,7 +306,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
             </div>
 
             <div
-              className="link-confirm"
+              className="aoLinkConfirm"
               role="button"
               tabIndex={0}
               title="Confirm"
@@ -318,7 +318,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
           </div>
         </>
       ) : (
-        <div className="link-view">
+        <div className="aoLinkView">
           <a
             href={sanitizeUrl(linkUrl)}
             target="_blank"
@@ -326,7 +326,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
             {linkUrl}
           </a>
           <div
-            className="link-edit"
+            className="aoLinkEdit"
             role="button"
             tabIndex={0}
             title="Edit link"
@@ -340,7 +340,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
             <EditRegular fontSize={16} />
           </div>
           <div
-            className="link-trash"
+            className="aoLinkTrash"
             role="button"
             tabIndex={0}
             title="Remove link"

@@ -1,4 +1,4 @@
-.link-editor {
+.aoLinkEditor {
   display: flex;
   position: absolute;
   top: 0;
@@ -19,7 +19,7 @@
   will-change: transform;
 }
 
-.link-input {
+.aoLinkInput {
   flex: 1;
   min-width: 180px;
   border: none;
@@ -31,21 +31,21 @@
   color: #242424;
 }
 
-.link-input::placeholder {
+.aoLinkInput::placeholder {
   color: #8a8a8a;
 }
 
-.link-input-actions {
+.aoLinkInputActions {
   display: flex;
   align-items: center;
   gap: 2px;
   flex: 0 0 auto;
 }
 
-.link-cancel,
-.link-confirm,
-.link-edit,
-.link-trash {
+.aoLinkCancel,
+.aoLinkConfirm,
+.aoLinkEdit,
+.aoLinkTrash {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -57,33 +57,33 @@
   flex: 0 0 auto;
 }
 
-.link-cancel:hover,
-.link-edit:hover,
-.link-trash:hover {
+.aoLinkCancel:hover,
+.aoLinkEdit:hover,
+.aoLinkTrash:hover {
   background-color: #f0f0f0;
 }
 
-.link-confirm {
+.aoLinkConfirm {
   background-color: #0f6cbd;
   color: #fff;
 }
 
-.link-confirm:hover {
+.aoLinkConfirm:hover {
   background-color: #115ea3;
 }
 
-.link-trash:hover {
+.aoLinkTrash:hover {
   color: #c4272c;
 }
 
-.link-view {
+.aoLinkView {
   display: flex;
   align-items: center;
   gap: 2px;
   max-width: 100%;
 }
 
-.link-view a {
+.aoLinkView a {
   color: #0f6cbd;
   text-decoration: underline;
   padding: 0 8px;

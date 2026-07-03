@@ -2,6 +2,11 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.3.1] — 2026-07-03
+
+### Fixed
+- The floating link editor's CSS classes (`link-editor`, `link-input`, `link-edit`, `link-trash`, `link-confirm`, `link-cancel`, `link-view`, `link-input-actions`) were generic, unprefixed names that could collide with a host app's own CSS, breaking the popup's styling. Renamed to the `ao`-prefixed convention (`aoLinkEditor`, `aoLinkInput`, etc.) already used elsewhere in the codebase.
+
 ## [1.3.0] — 2026-07-03
 
 ### Changed
