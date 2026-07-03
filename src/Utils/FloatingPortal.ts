@@ -2,10 +2,17 @@ import type { LexicalEditor } from 'lexical';
 import { useEffect, useState } from 'react';
 
 /**
- * Mounts a `position: fixed` overlay host inside the closest Fluent
- * Panel/Layer (or document.body) rather than deep inside the editor's own
- * DOM tree, so floating UI isn't clipped/hidden by a host Panel/Layer's own
- * stacking context or an ancestor's `overflow`.
+ * Mounts a `position: fixed` overlay host as a direct child of
+ * `document.body` rather than anywhere inside the editor's own DOM tree
+ * (or a host app's Panel/Layer wrapper). Nesting inside a host container
+ * — even one picked specifically to dodge clipping — still inherits
+ * whatever sizing/containing-block behavior that container has, which is
+ * exactly what broke positioning inside a Fluent `Panel`. Appending
+ * straight to `body` is the one placement every `position: fixed`
+ * consumer can reason about: no ancestor `overflow`, no ancestor
+ * transform/filter/contain to redefine the containing block, and our
+ * z-index (10000010) is comfortably above any host chrome (Fluent's
+ * Panel layer host sits at 1000000).
  */
 export function useFloatingPortalContainer(editor: LexicalEditor): HTMLElement | null {
   const [container, setContainer] = useState<HTMLElement | null>(null);
@@ -14,15 +21,9 @@ export function useFloatingPortalContainer(editor: LexicalEditor): HTMLElement |
     const root = editor.getRootElement();
     if (!root) return;
 
-    const panelOrLayer =
-      (root.closest('.ms-Panel-main') as HTMLElement | null) ||
-      (root.closest('.ms-Panel') as HTMLElement | null) ||
-      (root.closest('.ms-Layer') as HTMLElement | null) ||
-      document.body;
-
     const host = document.createElement('div');
     host.className = 'lexical-floating-ui-host';
-    panelOrLayer.appendChild(host);
+    document.body.appendChild(host);
     setContainer(host);
 
     return () => {
