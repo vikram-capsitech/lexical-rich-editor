@@ -2,6 +2,27 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.3.6] — 2026-07-03
+
+### Changed
+- The floating link editor is now a Fluent `Popover` anchored to a virtual positioning target (the selection's bounding rect) instead of a hand-rolled `position: fixed` element with manual `getBoundingClientRect` math and its own DOM portal. Positioning is handled by `floating-ui` (via Fluent) and styling by Griffel (CSS-in-JS injected at runtime by `@fluentui/react-components`), so it no longer depends on `dist/index.css` being imported by the consuming app, and isn't affected by transformed/scrolling ancestor containers.
+
+## [1.3.5] — 2026-07-03
+
+### Changed
+- `AoModal` (used by the Table, YouTube, Inline Image, and Image insert dialogs) replaced with Fluent's `Popover`/`PopoverSurface` instead of a custom fixed-position backdrop. Same motivation as above: Griffel-based styling and floating-ui positioning remove the dependency on this package's own CSS file and on manual containing-block handling. The insert-dialog trigger buttons are now passed to `AoModal` via a `trigger` prop instead of being rendered as a sibling.
+
+## [1.3.4] — 2026-07-03
+
+### Fixed
+- Floating link editor, character-style popup, and insert-dialog overlays are now portaled directly to `document.body` instead of into the closest Fluent `Panel`/`Layer` ancestor. Nesting inside a host Panel inherited that Panel's own sizing/containing-block behavior, which could pin the popup/modal near the Panel's own chrome instead of the viewport or caret.
+
+## [1.3.3] — 2026-07-03
+
+### Fixed
+- Floating link editor and character-style popup could render offset toward the wrong corner when embedded inside a host page's animated/sliding Panel (a CSS `transform` on an ancestor creates a new containing block for `position: fixed` descendants, so viewport-relative coordinates no longer land in the right place). Added `getFixedPositionOrigin` to detect this and adjust.
+- `AoModal`'s backdrop switched from `position: absolute` (sized to the editor's own content-height container) to `position: fixed` portaled into the same Panel/Layer/body host as the other floating UI, so insert dialogs render as full overlays instead of in-flow content after the editor.
+
 ## [1.3.1] — 2026-07-03
 
 ### Fixed
