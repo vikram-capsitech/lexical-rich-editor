@@ -208,44 +208,45 @@ export const InsertImageDialog = ({
   };
 
   return (
-    <>
-      <Button
-        size='small'
-        title='Add Image'
-        key='upload-image'
-        disabled={disabled}
-        icon={<ImageAddRegular style={{ color: iconColor }} />}
-        style={{
-          background: isOpen && !disabled ? '#ebebeb' : 'none',
-          border: 'none',
-          margin: 2,
-          opacity: disabled ? 0.55 : 1,
-          cursor: disabled ? 'not-allowed' : 'pointer',
-        }}
-        onClick={() => {
-          if (disabled) return;
-          setIsOpen((prev) => !prev);
+    <AoModal
+      isOpen={disabled ? false : isOpen}
+      onOpenChange={(open) => {
+        if (disabled) return;
+        setIsOpen(open);
+        if (open) {
           setSrc('');
           setAltText('');
           setFileName('');
-        }}
-      />
-
-      <AoModal
-        isOpen={disabled ? false : isOpen}
-        onDismiss={() => !disabled && setIsOpen(false)}
-        title='Insert image'
-        maxWidth={340}
-        actions={
-          <>
-            <Button size='small' disabled={isDisabled} onClick={() => onClick({ altText, src })}>
-              Add
-            </Button>
-            <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
-              Cancel
-            </Button>
-          </>
-        }>
+        }
+      }}
+      trigger={
+        <Button
+          size='small'
+          title='Add Image'
+          key='upload-image'
+          disabled={disabled}
+          icon={<ImageAddRegular style={{ color: iconColor }} />}
+          style={{
+            background: isOpen && !disabled ? '#ebebeb' : 'none',
+            border: 'none',
+            margin: 2,
+            opacity: disabled ? 0.55 : 1,
+            cursor: disabled ? 'not-allowed' : 'pointer',
+          }}
+        />
+      }
+      title='Insert image'
+      maxWidth={340}
+      actions={
+        <>
+          <Button size='small' disabled={isDisabled} onClick={() => onClick({ altText, src })}>
+            Add
+          </Button>
+          <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
+            Cancel
+          </Button>
+        </>
+      }>
         <Stack tokens={{ childrenGap: 8 }}>
           <Field label='Upload' size='small'>
             <label
@@ -305,7 +306,6 @@ export const InsertImageDialog = ({
           )}
         </Stack>
       </AoModal>
-    </>
   );
 };
 

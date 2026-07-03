@@ -33,35 +33,35 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
   };
 
   return (
-    <>
-      <Button
-        size='small'
-        title='Add table'
-        disabled={disabled}
-        key='insert-table-nodes'
-        icon={<TableAddRegular style={{ color: iconColor }} />}
-        style={{
-          background: isOpen && !disabled ? '#ebebeb' : 'none',
-          border: 'none',
-
-          margin: 2,
-          opacity: disabled ? 0.55 : 1,
-          cursor: disabled ? 'not-allowed' : 'pointer',
-        }}
-        onClick={() => {
-          if (disabled) return;
-          setIsOpen((prev) => !prev);
+    <AoModal
+      isOpen={disabled ? false : isOpen}
+      onOpenChange={(open) => {
+        if (disabled) return;
+        setIsOpen(open);
+        if (open) {
           setRows('');
           setColumns('');
-        }}
-      />
-
-      <AoModal
-        isOpen={disabled ? false : isOpen}
-        onDismiss={() => !disabled && setIsOpen(false)}
-        title='Insert table'
-        maxWidth={300}
-        actions={
+        }
+      }}
+      trigger={
+        <Button
+          size='small'
+          title='Add table'
+          disabled={disabled}
+          key='insert-table-nodes'
+          icon={<TableAddRegular style={{ color: iconColor }} />}
+          style={{
+            background: isOpen && !disabled ? '#ebebeb' : 'none',
+            border: 'none',
+            margin: 2,
+            opacity: disabled ? 0.55 : 1,
+            cursor: disabled ? 'not-allowed' : 'pointer',
+          }}
+        />
+      }
+      title='Insert table'
+      maxWidth={300}
+      actions={
           <>
             <Button
               size='small'
@@ -99,6 +99,5 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
           </Field>
         </Stack>
       </AoModal>
-    </>
   );
 };

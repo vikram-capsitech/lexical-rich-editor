@@ -145,52 +145,53 @@ export const InsertInlineImageDialog = ({
   };
 
   return (
-    <>
-      <Button
-        size='small'
-        key='upload-inline-image'
-        title='Add Inline Image'
-        disabled={disabled}
-        icon={<ImageEditRegular style={{ color: iconColor }} />}
-        style={{
-          background: isOpen && !disabled ? '#ebebeb' : 'none',
-          border: 'none',
-          margin: 2,
-          opacity: disabled ? 0.55 : 1,
-          cursor: disabled ? 'not-allowed' : 'pointer',
-        }}
-        onClick={() => {
-          if (disabled) return;
-          setIsOpen((prev) => !prev);
+    <AoModal
+      isOpen={disabled ? false : isOpen}
+      onOpenChange={(open) => {
+        if (disabled) return;
+        setIsOpen(open);
+        if (open) {
           setAltText('');
           setSrc('');
           setFileName('');
-        }}
-      />
-
-      <AoModal
-        isOpen={disabled ? false : isOpen}
-        onDismiss={() => !disabled && setIsOpen(false)}
-        title='Insert inline image'
-        maxWidth={360}
-        actions={
-          <>
-            <Button
-              size='small'
-              key='file-inline-upload-btn'
-              disabled={isDisabled}
-              onClick={handleOnClick}>
-              Add
-            </Button>
-            <Button
-              size='small'
-              key='file-inline-upload-cancel'
-              disabled={disabled}
-              onClick={() => setIsOpen(false)}>
-              Cancel
-            </Button>
-          </>
-        }>
+        }
+      }}
+      trigger={
+        <Button
+          size='small'
+          key='upload-inline-image'
+          title='Add Inline Image'
+          disabled={disabled}
+          icon={<ImageEditRegular style={{ color: iconColor }} />}
+          style={{
+            background: isOpen && !disabled ? '#ebebeb' : 'none',
+            border: 'none',
+            margin: 2,
+            opacity: disabled ? 0.55 : 1,
+            cursor: disabled ? 'not-allowed' : 'pointer',
+          }}
+        />
+      }
+      title='Insert inline image'
+      maxWidth={360}
+      actions={
+        <>
+          <Button
+            size='small'
+            key='file-inline-upload-btn'
+            disabled={isDisabled}
+            onClick={handleOnClick}>
+            Add
+          </Button>
+          <Button
+            size='small'
+            key='file-inline-upload-cancel'
+            disabled={disabled}
+            onClick={() => setIsOpen(false)}>
+            Cancel
+          </Button>
+        </>
+      }>
         <Stack tokens={{ childrenGap: 8 }}>
           <Field label='Upload' size='small'>
             <label
@@ -257,7 +258,6 @@ export const InsertInlineImageDialog = ({
           </Field>
         </Stack>
       </AoModal>
-    </>
   );
 };
 

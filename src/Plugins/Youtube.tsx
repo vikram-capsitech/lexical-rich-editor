@@ -33,55 +33,53 @@ export const YoutubeUploadPlugin = ({ disabled }: { disabled: boolean }) => {
   };
 
   return (
-    <>
-      <Button
-        key='upload-video'
-        title='Add youtube URL'
-        size='small'
-        disabled={disabled}
-        icon={<VideoClipRegular style={{ color: iconColor }} />}
-        style={{
-          background: isOpen && !disabled ? '#ebebeb' : 'none',
-          border: 'none',
-          margin: 2,
-          opacity: disabled ? 0.55 : 1,
-          cursor: disabled ? 'not-allowed' : 'pointer',
-        }}
-        onClick={() => {
-          if (disabled) return;
-          setIsOpen((prev) => !prev);
-          setURL('');
-        }}
-      />
-
-      <AoModal
-        isOpen={disabled ? false : isOpen}
-        onDismiss={() => !disabled && setIsOpen(false)}
-        title='Embed YouTube video'
-        maxWidth={320}
-        actions={
-          <>
-            <Button size='small' disabled={disabled || !url} onClick={onHandleEmbeded}>
-              Add
-            </Button>
-            <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
-              Cancel
-            </Button>
-          </>
-        }>
-        <Stack tokens={{ childrenGap: 8 }}>
-          <Field label='URL' size='small'>
-            <Input
-              autoFocus={!disabled}
-              disabled={disabled}
-              value={url}
-              appearance='underline'
-              placeholder='Add Youtube video URL'
-              onChange={(_, v) => setURL(v.value)}
-            />
-          </Field>
-        </Stack>
-      </AoModal>
-    </>
+    <AoModal
+      isOpen={disabled ? false : isOpen}
+      onOpenChange={(open) => {
+        if (disabled) return;
+        setIsOpen(open);
+        if (open) setURL('');
+      }}
+      trigger={
+        <Button
+          key='upload-video'
+          title='Add youtube URL'
+          size='small'
+          disabled={disabled}
+          icon={<VideoClipRegular style={{ color: iconColor }} />}
+          style={{
+            background: isOpen && !disabled ? '#ebebeb' : 'none',
+            border: 'none',
+            margin: 2,
+            opacity: disabled ? 0.55 : 1,
+            cursor: disabled ? 'not-allowed' : 'pointer',
+          }}
+        />
+      }
+      title='Embed YouTube video'
+      maxWidth={320}
+      actions={
+        <>
+          <Button size='small' disabled={disabled || !url} onClick={onHandleEmbeded}>
+            Add
+          </Button>
+          <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
+            Cancel
+          </Button>
+        </>
+      }>
+      <Stack tokens={{ childrenGap: 8 }}>
+        <Field label='URL' size='small'>
+          <Input
+            autoFocus={!disabled}
+            disabled={disabled}
+            value={url}
+            appearance='underline'
+            placeholder='Add Youtube video URL'
+            onChange={(_, v) => setURL(v.value)}
+          />
+        </Field>
+      </Stack>
+    </AoModal>
   );
 };

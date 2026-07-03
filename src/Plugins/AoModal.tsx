@@ -1,13 +1,16 @@
-import { FluentProvider, webLightTheme } from '@fluentui/react-components';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import {
+  Button,
+  Popover,
+  PopoverSurface,
+  PopoverTrigger,
+} from '@fluentui/react-components';
+import { DismissRegular } from '@fluentui/react-icons';
 import * as React from 'react';
-import { createPortal } from 'react-dom';
-import { useFloatingPortalContainer } from '../Utils/FloatingPortal';
-import './AoModal.css';
 
 export interface AoModalProps {
   isOpen: boolean;
-  onDismiss: () => void;
+  onOpenChange: (open: boolean) => void;
+  trigger: React.ReactElement;
   title: string;
   maxWidth?: number;
   actions?: React.ReactNode;
@@ -15,57 +18,51 @@ export interface AoModalProps {
 }
 
 /**
- * Shared replacement for Dialog across the insert plugins. Portals the modal
- * as a `position: fixed` overlay into the closest Fluent Panel/Layer (or
- * document.body) instead of the editor's own root wrapper — the editor root
- * is only ever as tall as its content, so an absolutely-positioned backdrop
- * anchored there doesn't cover the page; it just renders in-flow after it.
+ * Shared replacement for Dialog across the insert plugins. Built on Fluent's
+ * own Popover instead of a hand-rolled portal/backdrop: Popover positions
+ * itself relative to its trigger via floating-ui and is styled with Griffel
+ * (CSS-in-JS injected at runtime), so it isn't affected by host page
+ * containing-block quirks or by whether this package's own CSS file has
+ * been imported by the consuming app.
  */
 export const AoModal = ({
   isOpen,
-  onDismiss,
+  onOpenChange,
+  trigger,
   title,
-  maxWidth = 280, // Default to a smaller, compact size
+  maxWidth = 280,
   actions,
   children,
-}: AoModalProps): JSX.Element | null => {
-  const [editor] = useLexicalComposerContext();
-  const hostElement = useFloatingPortalContainer(editor);
-
-  if (!isOpen) return null;
-
-  const modalContent = (
-    <div className="aoModalBackdrop" onClick={onDismiss}>
-      <FluentProvider
-        theme={webLightTheme}
-        className="aoModalWrapper aoModalContainer"
-        style={{ maxWidth, width: '90vw' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header Section */}
-        <div className="aoModalHeader">
-          <h2 className="aoModalTitle">{title}</h2>
-          <button
-            className="aoModalCloseButton"
+}: AoModalProps): JSX.Element => {
+  return (
+    <Popover
+      open={isOpen}
+      onOpenChange={(_, data) => onOpenChange(data.open)}
+      positioning={{ position: 'below', align: 'start' }}
+    >
+      <PopoverTrigger disableButtonEnhancement>{trigger}</PopoverTrigger>
+      <PopoverSurface style={{ minWidth: 240, maxWidth, width: '90vw' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>{title}</h2>
+          <Button
+            appearance="subtle"
+            size="small"
+            icon={<DismissRegular />}
             aria-label="Close popup"
-            onClick={onDismiss}
-          >
-            ✕
-          </button>
+            onClick={() => onOpenChange(false)}
+          />
         </div>
 
-        {/* Body Section */}
-        <div className="aoModalBody">{children}</div>
+        <div>{children}</div>
 
-        {/* Actions Footer Section */}
-        {actions && <div className="aoModalActions">{actions}</div>}
-      </FluentProvider>
-    </div>
+        {actions && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+            {actions}
+          </div>
+        )}
+      </PopoverSurface>
+    </Popover>
   );
-
-  if (!hostElement) return null;
-
-  return createPortal(modalContent, hostElement);
 };
 
 export default AoModal;
