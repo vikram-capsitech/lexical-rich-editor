@@ -123,7 +123,7 @@ const hsvToRgb = (h: number, s: number, v: number) => {
   else if (h < 180) [rr, gg, bb] = [0, c, x];
   else if (h < 240) [rr, gg, bb] = [0, x, c];
   else if (h < 300) [rr, gg, bb] = [x, 0, c];
-  else [rr, gg, bb] = [c, 0, x];
+  else[rr, gg, bb] = [c, 0, x];
 
   return {
     r: Math.round((rr + m) * 255),

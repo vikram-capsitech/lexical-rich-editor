@@ -60,7 +60,7 @@
 
 span.editor-image {
   cursor: default;
-  display: inline-block;
+  display: block;
   position: relative;
   user-select: none;
 }
@@ -146,7 +146,7 @@ span.editor-image {
   background-color: rgba(60, 132, 244, 0.1);
 }
 
-.image-resizer {
+.editor-image .image-resizer {
   display: block;
   width: 7px;
   height: 7px;
@@ -155,61 +155,53 @@ span.editor-image {
   border: 1px solid #fff;
 }
 
-.image-resizer.image-resizer-n {
+.editor-image .image-resizer.image-resizer-n {
   top: -6px;
   left: 48%;
   cursor: n-resize;
 }
 
-.image-resizer.image-resizer-ne {
+.editor-image .image-resizer.image-resizer-ne {
   top: -6px;
   right: -6px;
   cursor: ne-resize;
 }
 
-.image-resizer.image-resizer-e {
+.editor-image .image-resizer.image-resizer-e {
   bottom: 48%;
   right: -6px;
   cursor: e-resize;
 }
 
-.image-resizer.image-resizer-se {
+.editor-image .image-resizer.image-resizer-se {
   bottom: -2px;
   right: -6px;
   cursor: nwse-resize;
 }
 
-.image-resizer.image-resizer-s {
+.editor-image .image-resizer.image-resizer-s {
   bottom: -2px;
   left: 48%;
   cursor: s-resize;
 }
 
-.image-resizer.image-resizer-sw {
+.editor-image .image-resizer.image-resizer-sw {
   bottom: -2px;
   left: -6px;
   cursor: sw-resize;
 }
 
-.image-resizer.image-resizer-w {
+.editor-image .image-resizer.image-resizer-w {
   bottom: 48%;
   left: -6px;
   cursor: w-resize;
 }
 
-.image-resizer.image-resizer-nw {
+.editor-image .image-resizer.image-resizer-nw {
   top: -6px;
   left: -6px;
   cursor: nw-resize;
 }
-
-span.inline-editor-image {
-  cursor: default;
-  display: inline-block;
-  position: relative;
-  user-select: none;
-}
-
 .inline-editor-image img {
   max-width: 100%;
   cursor: default;
@@ -233,17 +225,15 @@ span.inline-editor-image {
 }
 
 .inline-editor-image.position-full {
-  margin: 1em 0 1em 0;
+  margin: 8px 0;
 }
 
 .inline-editor-image.position-left {
-  float: left;
-  margin: 1em 1em 0 0;
+  margin: 4px 8px 4px 0;
 }
 
 .inline-editor-image.position-right {
-  float: right;
-  margin: 1em 0 0 1em;
+  margin: 4px 0 4px 8px;
 }
 
 .inline-editor-image .image-edit-button {
@@ -278,9 +268,7 @@ span.inline-editor-image {
   border-collapse: collapse;
   border-spacing: 0;
   margin: 12px 0;
-  max-width: 100%;
-  box-sizing: border-box;
-  table-layout: fixed;
+  overflow: hidden;
 }
 
 .lexical-table-row {
@@ -289,17 +277,13 @@ span.inline-editor-image {
 .lexical-table-cell,
 .lexical-table-cell-header {
   border: 1px solid #c8c8c8;
-  width: 60px;
-  height: 60px;
-  padding: 4px;
-  vertical-align: middle;
-  text-align: center;
+  padding: 10px 36px 10px 10px;
+  min-width: 90px;
+  vertical-align: top;
   position: relative;
   background: #ffffff;
-  word-break: break-word;
   overflow-wrap: break-word;
-  box-sizing: border-box;
-  overflow: hidden;
+  word-break: break-word;
 }
 
 .lexical-table-cell-header {
@@ -352,8 +336,6 @@ span.inline-editor-image {
 /* scope to your wrapper class if possible */
 .editor {
   line-height: 1.25;
-  max-width: 100%;
-  box-sizing: border-box;
 }
 
 /* emails/signatures rely on tight paragraphs */
@@ -362,8 +344,12 @@ span.inline-editor-image {
   line-height: 1.25;
 }
 
-/* Remove browser-default block margins from headings so a single
-   headed line doesn't push adjacent lines far apart */
+/* pasted signatures often contain divs */
+.editor div {
+  margin: 0;
+}
+
+/* headings: remove browser default margins so they don't add huge gaps */
 .editor h1,
 .editor h2,
 .editor h3,
@@ -371,12 +357,8 @@ span.inline-editor-image {
 .editor h5,
 .editor h6 {
   margin: 0;
-  line-height: 1.2;
-}
-
-/* pasted signatures often contain divs */
-.editor div {
-  margin: 0;
+  line-height: 1.25;
+  font-weight: bold;
 }
 
 /* avoid baseline gaps */

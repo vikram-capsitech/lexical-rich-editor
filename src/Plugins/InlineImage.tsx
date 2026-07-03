@@ -1,24 +1,27 @@
 import { Stack } from '@fluentui/react';
 import {
   Button,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Dropdown,
   Field,
   Input,
   makeStyles,
+  MessageBar,
+  MessageBarBody,
   Option,
+  Popover,
+  PopoverSurface,
+  PopoverTrigger,
 } from '@fluentui/react-components';
+import { DEFAULT_VALIDATION_MESSAGES } from '../ContentEditorComponent.types';
+import type { ValidationMessages } from '../ContentEditorComponent.types';
 import { AttachFilled, ImageEditRegular } from '@fluentui/react-icons';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $wrapNodeInElement, mergeRegister } from '@lexical/utils';
 import {
   $createParagraphNode,
   $createRangeSelection,
+  $getNearestNodeFromDOMNode,
+  $getNodeByKey,
   $getSelection,
   $insertNodes,
   $isNodeSelection,
@@ -67,35 +70,26 @@ const useStyles = makeStyles({
 export const InsertInlineImageDialog = ({
   disabled,
   activeEditor,
-  open: externalOpen,
-  onClose,
+  maxImageSizeMB,
+  validationMessages,
 }: {
   activeEditor: LexicalEditor;
   disabled: boolean;
-  open?: boolean;
-  onClose?: () => void;
+  maxImageSizeMB?: number;
+  validationMessages?: ValidationMessages;
 }): JSX.Element => {
   const hasModifier = useRef(false);
   const [src, setSrc] = useState('');
-  const [internalOpen, setInternalOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [altText, setAltText] = useState('');
   const [fileName, setFileName] = useState('');
   const [position, setPosition] = useState<Position>('left');
+  const [fileSizeError, setFileSizeError] = useState<string | null>(null);
   const styles = useStyles();
 
   const iconColor = disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#333333';
 
-  const isControlled = externalOpen !== undefined;
-  const isOpen = isControlled ? (!!externalOpen && !disabled) : (internalOpen && !disabled);
-  const isAddDisabled = disabled || src === '';
-
-  const handleClose = () => {
-    setSrc('');
-    setAltText('');
-    setFileName('');
-    if (isControlled) onClose?.();
-    else setInternalOpen(false);
-  };
+  const isDisabled = disabled || src === '' || !!fileSizeError;
 
   const loadImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;
@@ -103,14 +97,32 @@ export const InsertInlineImageDialog = ({
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
+    const file = files[0];
+
+    if (maxImageSizeMB !== undefined) {
+      const fileMB = file.size / (1024 * 1024);
+      if (fileMB > maxImageSizeMB) {
+        const override = validationMessages?.imageTooLarge;
+        const msg = override !== undefined
+          ? (typeof override === 'function' ? override(fileMB, maxImageSizeMB) : override)
+          : DEFAULT_VALIDATION_MESSAGES.imageTooLarge(fileMB, maxImageSizeMB);
+        setFileSizeError(msg);
+        setSrc('');
+        setFileName('');
+        event.target.value = '';
+        return;
+      }
+    }
+
+    setFileSizeError(null);
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         setSrc(reader.result);
-        setFileName(files[0].name);
+        setFileName(file.name);
       }
     };
-    reader.readAsDataURL(files[0]);
+    reader.readAsDataURL(file);
   };
 
   useEffect(() => {
@@ -127,12 +139,22 @@ export const InsertInlineImageDialog = ({
     const payload = { altText, position, src };
     activeEditor.dispatchCommand(INSERT_INLINE_IMAGE_COMMAND, payload);
 
-    handleClose();
+    setIsOpen(false);
+    setAltText('');
+    setSrc('');
+    setFileName('');
+    setFileSizeError(null);
   };
 
   return (
-    <>
-      {!isControlled && (
+    <Popover
+      trapFocus
+      withArrow
+      open={disabled ? false : isOpen}
+      onOpenChange={(_, data) => {
+        if (!disabled) setIsOpen(data.open);
+      }}>
+      <PopoverTrigger disableButtonEnhancement>
         <Button
           size='small'
           key='upload-inline-image'
@@ -148,108 +170,104 @@ export const InsertInlineImageDialog = ({
           }}
           onClick={() => {
             if (disabled) return;
-            setSrc('');
+            setIsOpen((prev) => !prev);
             setAltText('');
+            setSrc('');
             setFileName('');
-            setInternalOpen(true);
           }}
         />
-      )}
+      </PopoverTrigger>
 
-      <Dialog
-        open={isOpen}
-        onOpenChange={(_, data) => {
-          if (!data.open) handleClose();
+      <PopoverSurface
+        style={{
+          width: '400px',
+          opacity: disabled ? 0.6 : 1,
+          pointerEvents: disabled ? 'none' : 'auto',
         }}>
-        <DialogSurface style={{ maxWidth: '440px' }}>
-          <DialogBody>
-            <DialogTitle>Insert Inline Image</DialogTitle>
-            <DialogContent>
-              <Stack tokens={{ childrenGap: 10 }} style={{ paddingTop: 8 }}>
-                <Field label='Upload' orientation='horizontal' size='small'>
-                  <label
-                    style={{
-                      cursor: disabled ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      opacity: disabled ? 0.75 : 1,
-                    }}>
-                    <input
-                      type='file'
-                      accept='image/*'
-                      key='inline-image-upload'
-                      style={{ display: 'none' }}
-                      disabled={disabled}
-                      onChange={loadImage}
-                    />
-
-                    <Stack horizontal>
-                      <AttachFilled
-                        style={{
-                          fontSize: '16px',
-                          color: disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#808080',
-                          marginTop: 2,
-                        }}
-                      />
-                      {!fileName && <span style={{ fontSize: 12, color: '#808080' }}>Upload File</span>}
-                    </Stack>
-
-                    {fileName && <span style={{ fontSize: 12, color: '#808080' }}>{fileName}</span>}
-                  </label>
-                </Field>
-
-                <Field label='Position' orientation='horizontal' size='small'>
-                  <Dropdown
-                    placeholder='Left Align'
-                    className={styles.alignDropdown}
-                    disabled={disabled}
-                    listbox={{ style: { width: '120px' } }}
-                    root={{ style: { borderBottom: '1px solid black' } }}>
-                    <Option key='full' text='full' onClick={() => setPosition('full')}>
-                      Full
-                    </Option>
-                    <Option key='left' text='left' onClick={() => setPosition('left')}>
-                      Left
-                    </Option>
-                    <Option key='right' text='right' onClick={() => setPosition('right')}>
-                      Right
-                    </Option>
-                  </Dropdown>
-                </Field>
-
-                <Field label='Alt Text' orientation='horizontal' size='small'>
-                  <Input
-                    placeholder='Alt text'
-                    appearance='underline'
-                    disabled={disabled}
-                    value={altText}
-                    onChange={(_, d) => setAltText(d.value)}
-                  />
-                </Field>
-              </Stack>
-            </DialogContent>
-            <DialogActions>
-              <Button
-                appearance='primary'
-                size='small'
-                key='file-inline-upload-btn'
-                disabled={isAddDisabled}
-                onClick={handleOnClick}>
-                Add
-              </Button>
-              <Button
-                size='small'
-                key='file-inline-upload-cancel'
+        <Stack tokens={{ childrenGap: 6, padding: '10px 0px 0px 0px' }}>
+          <Field label='Upload' orientation='horizontal' size='small'>
+            <label
+              style={{
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                opacity: disabled ? 0.75 : 1,
+              }}>
+              <input
+                type='file'
+                accept='image/*'
+                key='inline-image-upload'
+                style={{ display: 'none' }}
                 disabled={disabled}
-                onClick={handleClose}>
-                Cancel
-              </Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
-    </>
+                onChange={loadImage}
+              />
+
+              <Stack horizontal>
+                <AttachFilled
+                  style={{
+                    fontSize: '16px',
+                    color: disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#808080',
+                    marginTop: 2,
+                  }}
+                />
+                {!fileName && <span style={{ fontSize: 12, color: '#808080' }}>Upload File</span>}
+              </Stack>
+
+              {fileName && <span style={{ fontSize: 12, color: '#808080' }}>{fileName}</span>}
+            </label>
+          </Field>
+
+          <Field label='Position' orientation='horizontal' size='small'>
+            <Dropdown
+              className={styles.alignDropdown}
+              disabled={disabled}
+              value={position === 'full' ? 'Full' : position === 'right' ? 'Right' : 'Left'}
+              selectedOptions={[position ?? 'left']}
+              listbox={{ style: { width: '120px' } }}
+              root={{ style: { borderBottom: '1px solid black' } }}
+              onOptionSelect={(_, data) => setPosition(data.optionValue as Position)}>
+              <Option key='left' value='left'>Left</Option>
+              <Option key='right' value='right'>Right</Option>
+              <Option key='full' value='full'>Full</Option>
+            </Dropdown>
+          </Field>
+
+          {fileSizeError && (
+            <MessageBar intent='error' style={{ marginTop: 4 }}>
+              <MessageBarBody>{fileSizeError}</MessageBarBody>
+            </MessageBar>
+          )}
+
+          <Field label='Alt Text' orientation='horizontal' size='small'>
+            <Input
+              placeholder='Alt text'
+              appearance='underline'
+              disabled={disabled}
+              value={altText}
+              onChange={(_, d) => setAltText(d.value)}
+            />
+          </Field>
+
+          <Stack horizontal horizontalAlign='end' tokens={{ childrenGap: 6 }}>
+            <Button
+              size='small'
+              key='file-inline-upload-btn'
+              disabled={isDisabled}
+              onClick={handleOnClick}>
+              Add
+            </Button>
+            <Button
+              size='small'
+              key='file-inline-upload-cancel'
+              disabled={disabled}
+              onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+          </Stack>
+        </Stack>
+      </PopoverSurface>
+    </Popover>
   );
 };
 
@@ -269,6 +287,14 @@ export const InlineImagePlugin = () => {
           $insertNodes([imageNode]);
           if ($isRootOrShadowRoot(imageNode.getParentOrThrow())) {
             $wrapNodeInElement(imageNode, $createParagraphNode).selectEnd();
+          }
+          // Apply text alignment to the paragraph so toolbar alignment works
+          const parent = imageNode.getParent();
+          if (parent && typeof (parent as any).setFormat === 'function') {
+            const fmt = payload.position === 'right' ? 'right'
+              : payload.position === 'full' ? 'center'
+              : 'left';
+            (parent as any).setFormat(fmt);
           }
           return true;
         },
@@ -305,14 +331,29 @@ const img = document.createElement('img');
 img.src = TRANSPARENT_IMAGE;
 
 function $onDragStart(event: DragEvent): boolean {
-  const node = $getImageNodeInSelection();
+  let node = $getImageNodeInSelection();
+
+  if (!node) {
+    const target = event.target as HTMLElement | null;
+    if (!target) return false;
+    const lexicalNode = $getNearestNodeFromDOMNode(target);
+    if ($isInlineImageNode(lexicalNode)) node = lexicalNode;
+  }
+
   if (!node) return false;
 
   const dataTransfer = event.dataTransfer;
   if (!dataTransfer) return false;
 
+  const imgEl = (event.target as HTMLElement)?.closest?.('.inline-editor-image')
+    ?.querySelector?.('img') ?? event.target;
+  if (imgEl instanceof HTMLElement) {
+    dataTransfer.setDragImage(imgEl, 20, 20);
+  } else {
+    dataTransfer.setDragImage(img, 0, 0);
+  }
+
   dataTransfer.setData('text/plain', '_');
-  dataTransfer.setDragImage(img, 0, 0);
   dataTransfer.setData(
     'application/x-lexical-drag',
     JSON.stringify({
@@ -333,8 +374,8 @@ function $onDragStart(event: DragEvent): boolean {
 }
 
 const $onDragover = (event: DragEvent): boolean => {
-  const node = $getImageNodeInSelection();
-  if (!node) return false;
+  const hasDragData = !!event.dataTransfer?.types.includes('application/x-lexical-drag');
+  if (!hasDragData) return false;
 
   if (!canDropImage(event)) {
     event.preventDefault();
@@ -343,24 +384,27 @@ const $onDragover = (event: DragEvent): boolean => {
 };
 
 const $onDrop = (event: DragEvent, editor: LexicalEditor): boolean => {
-  const node = $getImageNodeInSelection();
-  if (!node) return false;
-
   const data = getDragImageData(event);
   if (!data) return false;
 
   event.preventDefault();
 
   if (canDropImage(event)) {
-    const range = getDragSelection(event);
-    node.remove();
+    const sourceKey = (data as any).key as string | undefined;
+    if (sourceKey) {
+      const sourceNode = $getNodeByKey(sourceKey);
+      if (sourceNode) sourceNode.remove();
+    }
 
+    const range = getDragSelection(event);
     const rangeSelection = $createRangeSelection();
     if (range !== null && range !== undefined) {
       rangeSelection.applyDOMRange(range);
     }
     $setSelection(rangeSelection);
-    editor.dispatchCommand(INSERT_INLINE_IMAGE_COMMAND, data);
+
+    const { key: _key, ...insertPayload } = data as any;
+    editor.dispatchCommand(INSERT_INLINE_IMAGE_COMMAND, insertPayload);
   }
   return true;
 };
@@ -395,9 +439,8 @@ const canDropImage = (event: DragEvent): boolean => {
   const target = event.target;
   return !!(
     isHTMLElement(target) &&
-    !target.closest('code, span.editor-image') &&
-    isHTMLElement(target.parentElement) &&
-    target.parentElement.closest('div.ContentEditable__root')
+    !target.closest('code, span.editor-image, .inline-editor-image') &&
+    target.closest('[contenteditable="true"]')
   );
 };
 

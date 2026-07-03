@@ -1005,12 +1005,11 @@ function MyEditor() {
                 </pre>
               ) : (
                 <div
+                  className="editor"
                   style={{
                     padding: "14px 20px",
                     maxHeight: 220,
                     overflowY: "auto",
-                    fontSize: 14,
-                    lineHeight: 1.7,
                     color: "#1e293b",
                     background: "#fff",
                   }}

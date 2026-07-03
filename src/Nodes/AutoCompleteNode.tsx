@@ -1,4 +1,4 @@
-import type { DOMExportOutput, EditorConfig, NodeKey, SerializedTextNode, Spread } from 'lexical';
+import type { DOMConversionMap, DOMExportOutput, EditorConfig, NodeKey, SerializedTextNode, Spread } from 'lexical';
 import { TextNode } from 'lexical';
 
 export type SerializedAutocompleteNode = Spread<{ uuid: string }, SerializedTextNode>;
@@ -16,6 +16,14 @@ export class AutocompleteNode extends TextNode {
 
   static importJSON(serializedNode: SerializedAutocompleteNode): AutocompleteNode {
     return new AutocompleteNode(serializedNode.text, serializedNode.uuid);
+  }
+
+  // AutocompleteNode is excluded from copy via excludeFromCopy(), so it is
+  // never placed on the clipboard and never needs to be reconstructed from
+  // HTML.  Returning null here satisfies Lexical's exportDOM/importDOM
+  // contract check and silences the console warning.
+  static importDOM(): DOMConversionMap | null {
+    return null;
   }
 
   exportJSON(): SerializedAutocompleteNode {

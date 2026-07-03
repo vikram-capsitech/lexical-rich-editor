@@ -1,6 +1,5 @@
-import { ContentEditorLevel } from '../ContentEditorComponent.types';
+import { ContentEditorLevel, ValidationMessages } from '../ContentEditorComponent.types';
 import { PageSetupValue } from './PageSetup';
-
 export enum RichTextPluginsType {
   Undo = 'undo', //
   Redo = 'redo', //
@@ -37,6 +36,10 @@ export const LOW_PRIORIRTY = 1;
 export interface IEditorProps {
   readOnly?: boolean;
   level: ContentEditorLevel;
+  /** Fully custom toolbar layout; overrides the `level`-based preset. */
+  customToolbar?: string[][];
+  maxImageSizeMB?: number;
+  validationMessages?: ValidationMessages;
   pageSetup: PageSetupValue;
   onPageSetupChange: (value: PageSetupValue) => void;
 }

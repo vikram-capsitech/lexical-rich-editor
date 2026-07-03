@@ -1,14 +1,11 @@
 import { Stack } from '@fluentui/react';
 import {
   Button,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Field,
   Input,
+  Popover,
+  PopoverSurface,
+  PopoverTrigger,
 } from '@fluentui/react-components';
 import { VideoClipRegular } from '@fluentui/react-icons';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
@@ -16,79 +13,40 @@ import { $insertNodes } from 'lexical';
 import { useState } from 'react';
 import { $createYouTubeNode } from '../Nodes/YoutubeNode';
 
-/**
- * Extract an 11-character YouTube video ID from any common URL format.
- *
- * Supported formats:
- *  - https://www.youtube.com/watch?v=VIDEO_ID
- *  - https://www.youtube.com/watch?v=VIDEO_ID&list=PLAYLIST
- *  - https://youtu.be/VIDEO_ID
- *  - https://youtu.be/VIDEO_ID?si=TRACKING
- *  - https://www.youtube.com/embed/VIDEO_ID
- *  - https://www.youtube.com/v/VIDEO_ID
- *  - https://www.youtube.com/shorts/VIDEO_ID       ← NEW
- *  - https://www.youtube.com/live/VIDEO_ID         ← NEW
- *  - VIDEO_ID  (bare 11-character alphanumeric ID) ← NEW
- */
-function extractYouTubeId(url: string): string | null {
-  const trimmed = url.trim();
-
-  // Bare 11-character video ID (only alphanumeric + _ -)
-  if (/^[\w-]{11}$/.test(trimmed)) return trimmed;
-
-  // Full URL patterns
-  const match = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/|live\/|u\/\w\/))([^#&?]{11})/.exec(trimmed);
-  return match ? match[1] : null;
-}
-
-export const YoutubeUploadPlugin = ({
-  disabled,
-  open: externalOpen,
-  onClose,
-}: {
-  disabled: boolean;
-  open?: boolean;
-  onClose?: () => void;
-}) => {
+export const YoutubeUploadPlugin = ({ disabled }: { disabled: boolean }) => {
   const [url, setURL] = useState('');
-  const [urlError, setUrlError] = useState('');
-  const [internalOpen, setInternalOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [editor] = useLexicalComposerContext();
 
   const iconColor = disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#424242';
-
-  const isControlled = externalOpen !== undefined;
-  const isOpen = isControlled ? (!!externalOpen && !disabled) : (internalOpen && !disabled);
-
-  const handleClose = () => {
-    setURL('');
-    setUrlError('');
-    if (isControlled) onClose?.();
-    else setInternalOpen(false);
-  };
 
   const onHandleEmbeded = () => {
     if (disabled) return;
     if (!url) return;
 
-    const id = extractYouTubeId(url);
-    if (!id) {
-      setUrlError('Invalid YouTube URL. Supported: watch?v=, youtu.be/, /shorts/, /live/');
-      return;
-    }
+    const match = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/.exec(url);
 
-    setUrlError('');
+    const id = match && match[2]?.length === 11 ? match[2] : null;
+    if (!id) return;
+
     editor.update(() => {
       const node = $createYouTubeNode(id);
       $insertNodes([node]);
     });
 
-    handleClose();
+    setURL('');
+    setIsOpen(false);
   };
 
   return (
-    <>
-      {!isControlled && (
+    <Popover
+      trapFocus
+      withArrow
+      open={disabled ? false : isOpen}
+      onOpenChange={(_, data) => {
+        if (!disabled) setIsOpen(data.open);
+      }}>
+      <PopoverTrigger disableButtonEnhancement>
         <Button
           key='upload-video'
           title='Add youtube URL'
@@ -104,64 +62,40 @@ export const YoutubeUploadPlugin = ({
           }}
           onClick={() => {
             if (disabled) return;
+            setIsOpen((prev) => !prev);
             setURL('');
-            setUrlError('');
-            setInternalOpen(true);
           }}
         />
-      )}
+      </PopoverTrigger>
 
-      <Dialog
-        open={isOpen}
-        onOpenChange={(_, data) => {
-          if (!data.open) handleClose();
+      <PopoverSurface
+        style={{
+          width: '270px',
+          opacity: disabled ? 0.6 : 1,
+          pointerEvents: disabled ? 'none' : 'auto',
         }}>
-        <DialogSurface style={{ maxWidth: '420px' }}>
-          <DialogBody>
-            <DialogTitle>Insert YouTube Video</DialogTitle>
-            <DialogContent>
-              <Stack tokens={{ childrenGap: 10 }} style={{ paddingTop: 8 }}>
-                <Field
-                  label='URL'
-                  orientation='horizontal'
-                  size='small'
-                  validationState={urlError ? 'error' : 'none'}
-                  validationMessage={urlError || undefined}>
-                  <Input
-                    autoFocus={!disabled}
-                    disabled={disabled}
-                    value={url}
-                    appearance='underline'
-                    placeholder='Paste YouTube URL or video ID…'
-                    onChange={(_, v) => {
-                      setURL(v.value);
-                      if (urlError) setUrlError(''); // clear error on edit
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') onHandleEmbeded();
-                    }}
-                  />
-                </Field>
-                <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
-                  Supports: youtube.com/watch?v=…, youtu.be/…, /shorts/…, /live/…
-                </div>
-              </Stack>
-            </DialogContent>
-            <DialogActions>
-              <Button
-                appearance='primary'
-                size='small'
-                disabled={disabled || !url}
-                onClick={onHandleEmbeded}>
-                Add
-              </Button>
-              <Button size='small' disabled={disabled} onClick={handleClose}>
-                Cancel
-              </Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
-    </>
+        <Stack tokens={{ childrenGap: 10 }}>
+          <Field label='URL' orientation='horizontal' size='small'>
+            <Input
+              autoFocus={!disabled}
+              disabled={disabled}
+              value={url}
+              appearance='underline'
+              placeholder='Add Youtube video URL'
+              onChange={(_, v) => setURL(v.value)}
+            />
+          </Field>
+
+          <Stack horizontal horizontalAlign='end' tokens={{ childrenGap: 6 }}>
+            <Button size='small' disabled={disabled || !url} onClick={onHandleEmbeded}>
+              Add
+            </Button>
+            <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+          </Stack>
+        </Stack>
+      </PopoverSurface>
+    </Popover>
   );
 };

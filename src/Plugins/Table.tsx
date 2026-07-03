@@ -1,14 +1,11 @@
 import { Stack } from '@fluentui/react';
 import {
   Button,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
   Field,
   Input,
+  Popover,
+  PopoverSurface,
+  PopoverTrigger,
 } from '@fluentui/react-components';
 import { TableAddRegular } from '@fluentui/react-icons';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
@@ -16,74 +13,40 @@ import { $createTableNodeWithDimensions } from '@lexical/table';
 import { $insertNodeToNearestRoot } from '@lexical/utils';
 import { useState } from 'react';
 
-const MAX_ROWS = 50;
-const MAX_COLS = 50;
-
-export const TableItemPlugin = ({
-  disabled,
-  open: externalOpen,
-  onClose,
-}: {
-  disabled: boolean;
-  open?: boolean;
-  onClose?: () => void;
-}) => {
+export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
   const [editor] = useLexicalComposerContext();
   const [columns, setColumns] = useState('');
   const [rows, setRows] = useState('');
-  const [internalOpen, setInternalOpen] = useState(false);
-  const [rowError, setRowError] = useState('');
-  const [colError, setColError] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
 
-  const isControlled = externalOpen !== undefined;
-  const isOpen = isControlled ? (!!externalOpen && !disabled) : (internalOpen && !disabled);
   const iconColor = disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#333333';
-
-  const handleClose = () => {
-    setRows('');
-    setColumns('');
-    setRowError('');
-    setColError('');
-    if (isControlled) onClose?.();
-    else setInternalOpen(false);
-  };
-
-  const onRowsChange = (val: string) => {
-    const clean = val.replace(/\D/g, '');
-    setRows(clean);
-    const n = Number(clean);
-    if (clean && n > MAX_ROWS) setRowError(`Maximum ${MAX_ROWS} rows allowed`);
-    else setRowError('');
-  };
-
-  const onColsChange = (val: string) => {
-    const clean = val.replace(/\D/g, '');
-    setColumns(clean);
-    const n = Number(clean);
-    if (clean && n > MAX_COLS) setColError(`Maximum ${MAX_COLS} columns allowed`);
-    else setColError('');
-  };
 
   const onAddTable = () => {
     if (disabled) return;
+
     const row = Number(rows);
     const col = Number(columns);
     if (!row || !col) return;
-    if (row > MAX_ROWS || col > MAX_COLS) return;
 
     editor.update(() => {
       const tableNode = $createTableNodeWithDimensions(row, col, true);
       $insertNodeToNearestRoot(tableNode);
     });
 
-    handleClose();
+    setRows('');
+    setColumns('');
+    setIsOpen(false);
   };
 
-  const isAddDisabled = disabled || !rows || !columns || !!rowError || !!colError;
-
   return (
-    <>
-      {!isControlled && (
+    <Popover
+      trapFocus
+      withArrow
+      open={disabled ? false : isOpen}
+      onOpenChange={(_, data) => {
+        if (!disabled) setIsOpen(data.open);
+      }}>
+      <PopoverTrigger disableButtonEnhancement>
         <Button
           size='small'
           title='Add table'
@@ -93,86 +56,63 @@ export const TableItemPlugin = ({
           style={{
             background: isOpen && !disabled ? '#ebebeb' : 'none',
             border: 'none',
+
             margin: 2,
             opacity: disabled ? 0.55 : 1,
             cursor: disabled ? 'not-allowed' : 'pointer',
           }}
           onClick={() => {
             if (disabled) return;
+            setIsOpen((prev) => !prev);
             setRows('');
             setColumns('');
-            setRowError('');
-            setColError('');
-            setInternalOpen(true);
           }}
         />
-      )}
+      </PopoverTrigger>
 
-      <Dialog
-        open={isOpen}
-        onOpenChange={(_, data) => {
-          if (!data.open) handleClose();
+      <PopoverSurface
+        style={{
+          width: '270px',
+          opacity: disabled ? 0.6 : 1,
+          pointerEvents: disabled ? 'none' : 'auto',
         }}>
-        <DialogSurface style={{ maxWidth: '380px' }}>
-          <DialogBody>
-            <DialogTitle>Insert Table</DialogTitle>
-            <DialogContent>
-              <Stack tokens={{ childrenGap: 10 }} style={{ paddingTop: 8 }}>
-                <Field
-                  label='Rows'
-                  orientation='horizontal'
-                  size='small'
-                  validationMessage={rowError || undefined}
-                  validationState={rowError ? 'error' : 'none'}>
-                  <Input
-                    autoFocus={!disabled}
-                    type='number'
-                    min={1}
-                    max={MAX_ROWS}
-                    value={rows}
-                    placeholder='Rows'
-                    appearance='underline'
-                    disabled={disabled}
-                    input={{ style: { textAlign: 'left' } }}
-                    onChange={(_, v) => onRowsChange(v.value)}
-                  />
-                </Field>
+        <Stack tokens={{ childrenGap: 10 }}>
+          <Field label='Rows' orientation='horizontal' size='small'>
+            <Input
+              autoFocus={!disabled}
+              value={rows}
+              placeholder='Rows'
+              appearance='underline'
+              disabled={disabled}
+              onChange={(_, v) => setRows(v.value)}
+            />
+          </Field>
 
-                <Field
-                  label='Columns'
-                  orientation='horizontal'
-                  size='small'
-                  validationMessage={colError || undefined}
-                  validationState={colError ? 'error' : 'none'}>
-                  <Input
-                    type='number'
-                    min={1}
-                    max={MAX_COLS}
-                    value={columns}
-                    placeholder='Columns'
-                    appearance='underline'
-                    disabled={disabled}
-                    input={{ style: { textAlign: 'left' } }}
-                    onChange={(_, v) => onColsChange(v.value)}
-                  />
-                </Field>
-              </Stack>
-            </DialogContent>
-            <DialogActions>
-              <Button
-                appearance='primary'
-                size='small'
-                disabled={isAddDisabled}
-                onClick={onAddTable}>
-                Add
-              </Button>
-              <Button size='small' disabled={disabled} onClick={handleClose}>
-                Cancel
-              </Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
-    </>
+          <Field label='Columns' orientation='horizontal' size='small'>
+            <Input
+              value={columns}
+              placeholder='Columns'
+              appearance='underline'
+              disabled={disabled}
+              onChange={(_, v) => setColumns(v.value)}
+            />
+          </Field>
+
+          <Stack horizontal horizontalAlign='end' tokens={{ childrenGap: 6 }}>
+            <Button
+              size='small'
+              appearance='primary'
+              disabled={disabled || !rows || !columns}
+              onClick={onAddTable}>
+              Add
+            </Button>
+
+            <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
+              Cancel
+            </Button>
+          </Stack>
+        </Stack>
+      </PopoverSurface>
+    </Popover>
   );
 };

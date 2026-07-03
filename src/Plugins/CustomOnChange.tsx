@@ -1,22 +1,72 @@
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
-import { $getRoot, $setSelection } from 'lexical';
-import { useCallback, useEffect, useRef } from 'react';
-import { postProcessOutput } from '../Utils/Sanitize';
+import { $getRoot } from 'lexical';
+import { useEffect, useRef } from 'react';
+import { normalizeToBlockHtml, postProcessOutput, sanitizeHtml } from '../Utils/Sanitize';
 
 interface ICustomOnChangePluginProps {
   value: string;
   onChange: (value: string) => void;
 }
 
+/**
+ * Splits heading elements (h1–h6) that contain two or more consecutive <br>
+ * tags into separate same-level heading elements.
+ *
+ * Why: Lexical stores Shift+Enter inside a heading as a LineBreakNode, which
+ * round-trips as a <br>.  When content is pasted or imported with double-<br>
+ * paragraph separators inside a heading (common in email HTML), all text ends
+ * up in one <hN> block.  After publishing, browser default heading margins
+ * make that look completely different from the editor view.
+ *
+ * Rule:
+ *  • 1 × <br>  → kept as-is (intentional Shift+Enter line break)
+ *  • 2+ × <br> → paragraph boundary; the element is split at that run
+ *
+ * Applied both on import (so the Lexical node tree is clean) and on export
+ * (so the saved HTML is semantically correct for the published view).
+ */
+export function splitHeadingsAtBrSequences(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const headings = Array.from(doc.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+
+  headings.forEach((el) => {
+    const inner = el.innerHTML;
+
+    // Regex: one <br> followed by one-or-more additional <br> (= 2+ total).
+    // Whitespace between tags is allowed.
+    const SEP = /<br\s*\/?>\s*(?:<br\s*\/?>)+/gi;
+    if (!SEP.test(inner)) return;   // nothing to split
+    SEP.lastIndex = 0;              // reset after .test()
+
+    const parts = inner.split(SEP).map((p) => p.trim()).filter(Boolean);
+    if (parts.length <= 1) return;
+
+    const parent = el.parentNode;
+    if (!parent) return;
+
+    const tagName = el.tagName.toLowerCase();
+    const attrs = Array.from(el.attributes);
+
+    const fragment = doc.createDocumentFragment();
+    parts.forEach((part) => {
+      const newEl = doc.createElement(tagName);
+      // Preserve the original element's attributes (e.g. style, dir).
+      attrs.forEach((a) => newEl.setAttribute(a.name, a.value));
+      newEl.innerHTML = part;
+      fragment.appendChild(newEl);
+    });
+
+    parent.replaceChild(fragment, el);
+  });
+
+  return doc.body.innerHTML;
+}
+
 export const CustomOnChangePlugin = ({ value, onChange }: ICustomOnChangePluginProps) => {
   const [editor] = useLexicalComposerContext();
   const initializedRef = useRef(false);
-
-  // Always-current ref so the stable handleChange below never goes stale.
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
 
   useEffect(() => {
     if (!value || initializedRef.current) return;
@@ -27,37 +77,27 @@ export const CustomOnChangePlugin = ({ value, onChange }: ICustomOnChangePluginP
       const root = $getRoot();
       root.clear();
 
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(value, 'text/html');
+      // Sanitize → split headings → ensure block wrapper so Lexical root is valid.
+      const safe    = sanitizeHtml(value);
+      const cleaned = normalizeToBlockHtml(splitHeadingsAtBrSequences(safe));
+      const parser  = new DOMParser();
+      const dom     = parser.parseFromString(cleaned, 'text/html');
       const nodes = $generateNodesFromDOM(editor, dom);
 
       root.append(...nodes);
-
-      // Prevent Lexical from placing a DOM cursor after this programmatic update.
-      // Without this, Lexical's commitPendingUpdates tries to sync the selection
-      // into the contenteditable, which causes some browsers to focus the element
-      // even when the user is typing in another field (e.g. To / CC / BCC).
-      $setSelection(null);
     });
   }, [editor, value]);
 
-  // Stable reference — never changes across renders because it only depends on
-  // `editor` (which is stable for the lifetime of the composer).
-  // This prevents OnChangePlugin from re-registering its Lexical update listener
-  // on every render. Without stability, each re-registration can flush Lexical's
-  // pending selection state (the cursor from the user's last edit), which causes
-  // the browser to re-focus the contenteditable even when the user has already
-  // moved to another field (e.g. Subject).
-  const handleChange = useCallback((editorState: any) => {
-    editorState.read(() => {
-      onChangeRef.current(postProcessOutput($generateHtmlFromNodes(editor)));
-    });
-  }, [editor]);
-
   return (
     <OnChangePlugin
-      onChange={handleChange}
-      ignoreSelectionChange
+      onChange={(editorState) => {
+        editorState.read(() => {
+          // Post-process: ensure any LineBreakNode-based paragraph separators
+          // inside headings are split into proper block elements in the output.
+          const raw = $generateHtmlFromNodes(editor);
+          onChange(postProcessOutput(splitHeadingsAtBrSequences(raw)));
+        });
+      }}
     />
   );
 };

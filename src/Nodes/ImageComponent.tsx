@@ -254,19 +254,6 @@ const ImageComponent =({src,altText,nodeKey,width, height,maxWidth, resizable, s
         COMMAND_PRIORITY_LOW,
       ),
       editor.registerCommand(
-        DRAGSTART_COMMAND,
-        (event) => {
-          if (event.target === imageRef.current) {
-            // TODO This is just a temporary workaround for FF to behave like other browsers.
-            // Ideally, this handles drag & drop too (and all browsers).
-            event.preventDefault();
-            return true;
-          }
-          return false;
-        },
-        COMMAND_PRIORITY_LOW,
-      ),
-      editor.registerCommand(
         KEY_DELETE_COMMAND,
         $onDelete,
         COMMAND_PRIORITY_LOW,
@@ -334,31 +321,34 @@ const ImageComponent =({src,altText,nodeKey,width, height,maxWidth, resizable, s
     setIsResizing(true);
   };
 
-  const draggable = isSelected && $isNodeSelection(selection) && !isResizing;
+  const draggable = !isResizing;
   const isFocused = (isSelected || isResizing) && isEditable;
   return (
     <Suspense fallback={null}>
-      <>
-        <div draggable={draggable}>
-          {isLoadError ? (
-            <BrokenImage />
-          ) : (
-            <LazyImage
-              className={
-                isFocused
-                  ? `focused ${$isNodeSelection(selection) ? 'draggable' : ''}`
-                  : null
-              }
-              src={src}
-              altText={altText}
-              imageRef={imageRef}
-              width={width}
-              height={height}
-              maxWidth={maxWidth}
-              onError={() => setIsLoadError(true)}
-            />
-          )}
-        </div>
+      {/* position:relative + inline-block ensures the div sizes to the image
+          so the absolutely-positioned resizer handles anchor to image edges */}
+      <div
+        draggable={draggable}
+        style={{ position: 'relative', display: 'inline-block' }}
+      >
+        {isLoadError ? (
+          <BrokenImage />
+        ) : (
+          <LazyImage
+            className={
+              isFocused
+                ? `focused ${$isNodeSelection(selection) ? 'draggable' : ''}`
+                : null
+            }
+            src={src}
+            altText={altText}
+            imageRef={imageRef}
+            width={width}
+            height={height}
+            maxWidth={maxWidth}
+            onError={() => setIsLoadError(true)}
+          />
+        )}
         {resizable && $isNodeSelection(selection) && isFocused && (
           <ImageResizer
             showCaption={showCaption}
@@ -366,12 +356,13 @@ const ImageComponent =({src,altText,nodeKey,width, height,maxWidth, resizable, s
             editor={editor}
             buttonRef={buttonRef}
             imageRef={imageRef}
+            maxWidth={maxWidth}
             onResizeStart={onResizeStart}
             onResizeEnd={onResizeEnd}
             captionsEnabled={!isLoadError && captionsEnabled}
           />
         )}
-      </>
+      </div>
     </Suspense>
   );
 }

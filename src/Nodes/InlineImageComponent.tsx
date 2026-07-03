@@ -22,6 +22,7 @@ import ImageResizer from '../Utils/ImageResizer';
 import './InlineImage.css';
 import type { Position } from './InlineImageNode';
 import { $isInlineImageNode } from './InlineImageNode';
+
 const imageCache = new Set();
 
 const useSuspenseImage = (src: string) => {
@@ -36,16 +37,18 @@ const useSuspenseImage = (src: string) => {
     });
   }
 }
-interface ILazyImageProps{
+
+interface ILazyImageProps {
   src: string;
   altText: string;
   className: string | null;
   height: 'inherit' | number;
   width: 'inherit' | number;
-  imageRef: {current: null | HTMLImageElement};
+  imageRef: { current: null | HTMLImageElement };
   position: Position;
 }
-const LazyImage = ({ altText, className, imageRef, src, width, height, position}:ILazyImageProps): JSX.Element  => {
+
+const LazyImage = ({ altText, className, imageRef, src, width, height, position }: ILazyImageProps): JSX.Element => {
   useSuspenseImage(src);
   return (
     <img
@@ -63,7 +66,8 @@ const LazyImage = ({ altText, className, imageRef, src, width, height, position}
     />
   );
 }
-interface IInlineImageComponent{
+
+interface IInlineImageComponent {
   altText: string;
   src: string;
   caption: LexicalEditor;
@@ -73,45 +77,16 @@ interface IInlineImageComponent{
   height: 'inherit' | number;
   position: Position;
 }
+
 const InlineImageComponent = ({ src, altText, nodeKey, width, height, showCaption, caption, position }: IInlineImageComponent): JSX.Element => {
   const [isSelected, setSelected, clearSelection] = useLexicalNodeSelection(nodeKey);
+  const [isResizing, setIsResizing] = useState(false);
   const [selection, setSelection] = useState<BaseSelection | null>(null);
   const activeEditorRef = useRef<LexicalEditor | null>(null);
   const imageRef = useRef<null | HTMLImageElement>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [editor] = useLexicalComposerContext();
   const isEditable = useLexicalEditable();
-  const [isResizing, setIsResizing] = useState<boolean>(false);
-
-  const onResizeEnd = (
-    nextWidth: 'inherit' | number,
-    nextHeight: 'inherit' | number,
-  ) => {
-    // Delay hiding the resize bars for click case
-    setTimeout(() => {
-      setIsResizing(false);
-    }, 200);
-
-    editor.update(() => {
-      const node = $getNodeByKey(nodeKey);
-      if ($isInlineImageNode(node)) {
-        node.setWidthAndHeight(nextWidth, nextHeight);
-      }
-    });
-  };
-
-  const onResizeStart = () => {
-    setIsResizing(true);
-  };
-
-  const setShowCaption = (show: boolean) => {
-    editor.update(() => {
-      const node = $getNodeByKey(nodeKey);
-      if ($isInlineImageNode(node)) {
-        node.setShowCaption(show);
-      }
-    });
-  };
 
   const $onDelete = useCallback(
     (payload: KeyboardEvent) => {
@@ -142,7 +117,6 @@ const InlineImageComponent = ({ src, altText, nodeKey, width, height, showCaptio
         latestSelection.getNodes().length === 1
       ) {
         if (showCaption) {
-          // Move focus into nested editor
           $setSelection(null);
           event.preventDefault();
           caption.focus();
@@ -182,10 +156,30 @@ const InlineImageComponent = ({ src, altText, nodeKey, width, height, showCaptio
     [caption, editor, setSelected],
   );
 
+  const onClick = useCallback(
+    (payload: MouseEvent) => {
+      const event = payload;
+      if (isResizing) {
+        return true;
+      }
+      if (event.target === imageRef.current) {
+        if (event.shiftKey) {
+          setSelected(!isSelected);
+        } else {
+          clearSelection();
+          setSelected(true);
+        }
+        return true;
+      }
+      return false;
+    },
+    [isResizing, isSelected, setSelected, clearSelection],
+  );
+
   useEffect(() => {
     let isMounted = true;
     const unregister = mergeRegister(
-      editor.registerUpdateListener(({editorState}) => {
+      editor.registerUpdateListener(({ editorState }) => {
         if (isMounted) {
           setSelection(editorState.read(() => $getSelection()));
         }
@@ -200,54 +194,13 @@ const InlineImageComponent = ({ src, altText, nodeKey, width, height, showCaptio
       ),
       editor.registerCommand<MouseEvent>(
         CLICK_COMMAND,
-        (payload) => {
-          const event = payload;
-          if (isResizing) {
-            return true;
-          }
-          if (event.target === imageRef.current) {
-            if (event.shiftKey) {
-              setSelected(!isSelected);
-            } else {
-              clearSelection();
-              setSelected(true);
-            }
-            return true;
-          }
-
-          return false;
-        },
+        onClick,
         COMMAND_PRIORITY_LOW,
       ),
-      editor.registerCommand(
-        DRAGSTART_COMMAND,
-        (event) => {
-          if (event.target === imageRef.current) {
-            // TODO This is just a temporary workaround for FF to behave like other browsers.
-            // Ideally, this handles drag & drop too (and all browsers).
-            event.preventDefault();
-            return true;
-          }
-          return false;
-        },
-        COMMAND_PRIORITY_LOW,
-      ),
-      editor.registerCommand(
-        KEY_DELETE_COMMAND,
-        $onDelete,
-        COMMAND_PRIORITY_LOW,
-      ),
-      editor.registerCommand(
-        KEY_BACKSPACE_COMMAND,
-        $onDelete,
-        COMMAND_PRIORITY_LOW,
-      ),
+      editor.registerCommand(KEY_DELETE_COMMAND, $onDelete, COMMAND_PRIORITY_LOW),
+      editor.registerCommand(KEY_BACKSPACE_COMMAND, $onDelete, COMMAND_PRIORITY_LOW),
       editor.registerCommand(KEY_ENTER_COMMAND, $onEnter, COMMAND_PRIORITY_LOW),
-      editor.registerCommand(
-        KEY_ESCAPE_COMMAND,
-        $onEscape,
-        COMMAND_PRIORITY_LOW,
-      ),
+      editor.registerCommand(KEY_ESCAPE_COMMAND, $onEscape, COMMAND_PRIORITY_LOW),
     );
     return () => {
       isMounted = false;
@@ -262,43 +215,60 @@ const InlineImageComponent = ({ src, altText, nodeKey, width, height, showCaptio
     $onDelete,
     $onEnter,
     $onEscape,
+    onClick,
     setSelected,
   ]);
 
-  const draggable = isSelected && $isNodeSelection(selection) && !isResizing;
+  const onResizeStart = () => {
+    setIsResizing(true);
+  };
+
+  const onResizeEnd = (nextWidth: 'inherit' | number, nextHeight: 'inherit' | number) => {
+    setTimeout(() => {
+      setIsResizing(false);
+    }, 200);
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey);
+      if ($isInlineImageNode(node)) {
+        node.setWidthAndHeight(nextWidth, nextHeight);
+      }
+    });
+  };
+
+  const draggable = !isResizing;
   const isFocused = (isSelected || isResizing) && isEditable;
+
   return (
     <Suspense fallback={null}>
-      <>
-        <span draggable={draggable}>
-          <LazyImage
-            className={
-              isFocused
-                ? `focused ${$isNodeSelection(selection) ? 'draggable' : ''}`
-                : null
-            }
-            src={src}
-            altText={altText}
-            imageRef={imageRef}
-            width={width}
-            height={height}
-            position={position}
-          />
-        </span>
-        {isFocused && $isNodeSelection(selection) && (
+      <span draggable={draggable} style={{ position: 'relative', display: 'inline-block' }}>
+        <LazyImage
+          className={
+            isFocused
+              ? `focused ${$isNodeSelection(selection) ? 'draggable' : ''}`
+              : null
+          }
+          src={src}
+          altText={altText}
+          imageRef={imageRef}
+          width={width}
+          height={height}
+          position={position}
+        />
+        {$isNodeSelection(selection) && isFocused && (
           <ImageResizer
-            showCaption={showCaption}
-            setShowCaption={setShowCaption}
+            showCaption={false}
+            setShowCaption={() => {}}
+            captionsEnabled={false}
             editor={editor}
             buttonRef={buttonRef}
             imageRef={imageRef}
             onResizeStart={onResizeStart}
             onResizeEnd={onResizeEnd}
-            captionsEnabled={false}
           />
         )}
-      </>
+      </span>
     </Suspense>
   );
 }
+
 export default InlineImageComponent;

@@ -10,12 +10,18 @@ import type {
   Spread,
 } from 'lexical';
 
-import { BlockWithAlignableContents } from '@lexical/react/LexicalBlockWithAlignableContents';
 import {
   DecoratorBlockNode,
   SerializedDecoratorBlockNode,
 } from '@lexical/react/LexicalDecoratorBlockNode';
-import { $getNodeByKey } from 'lexical';
+import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection';
+import { mergeRegister } from '@lexical/utils';
+import {
+  $getNodeByKey,
+  CLICK_COMMAND,
+  COMMAND_PRIORITY_LOW,
+  FORMAT_ELEMENT_COMMAND,
+} from 'lexical';
 import * as React from 'react';
 
 const DEFAULT_WIDTH = 560;
@@ -36,7 +42,8 @@ const handleBase: React.CSSProperties = {
   boxShadow: '0 0 2px rgba(0,0,0,0.4)',
 };
 
-type ResizeDir = 'se' | 'e' | 's';
+// All 8 compass directions.
+type ResizeDir = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
 
 interface ResizeState {
   startX: number;
@@ -84,13 +91,26 @@ function VideoResizer({
       let newW = rs.startW;
       let newH = rs.startH;
 
-      if (dir === 'se') {
+      // Right-side corners: drag right → wider (proportional)
+      if (dir === 'se' || dir === 'ne') {
         newW = Math.max(MIN_WIDTH, rs.startW + dx);
         newH = newW / rs.ratio;
+      // Left-side corners: drag left → wider (negate dx; proportional)
+      } else if (dir === 'nw' || dir === 'sw') {
+        newW = Math.max(MIN_WIDTH, rs.startW - dx);
+        newH = newW / rs.ratio;
+      // Right edge: width only
       } else if (dir === 'e') {
         newW = Math.max(MIN_WIDTH, rs.startW + dx);
+      // Left edge: negate dx so dragging left grows width
+      } else if (dir === 'w') {
+        newW = Math.max(MIN_WIDTH, rs.startW - dx);
+      // Bottom edge: height only
       } else if (dir === 's') {
         newH = Math.max(MIN_HEIGHT, rs.startH + dy);
+      // Top edge: negate dy so dragging up grows height
+      } else if (dir === 'n') {
+        newH = Math.max(MIN_HEIGHT, rs.startH - dy);
       }
 
       container.style.width = `${newW}px`;
@@ -112,31 +132,52 @@ function VideoResizer({
 
   return (
     <>
+      {/* North – top centre */}
       <div
-        style={{
-          ...handleBase,
-          top: '50%',
-          right: -5,
-          transform: 'translateY(-50%)',
-          cursor: 'ew-resize',
-        }}
+        style={{ ...handleBase, top: -5, left: '50%', transform: 'translateX(-50%)', cursor: 'n-resize' }}
+        onPointerDown={(e) => startResize(e, 'n')}
+        title='Resize height'
+      />
+      {/* North-East – top right */}
+      <div
+        style={{ ...handleBase, top: -5, right: -5, cursor: 'ne-resize' }}
+        onPointerDown={(e) => startResize(e, 'ne')}
+        title='Resize (proportional)'
+      />
+      {/* East – right centre */}
+      <div
+        style={{ ...handleBase, top: '50%', right: -5, transform: 'translateY(-50%)', cursor: 'ew-resize' }}
         onPointerDown={(e) => startResize(e, 'e')}
         title='Resize width'
       />
-      <div
-        style={{
-          ...handleBase,
-          bottom: -5,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          cursor: 'ns-resize',
-        }}
-        onPointerDown={(e) => startResize(e, 's')}
-        title='Resize height'
-      />
+      {/* South-East – bottom right */}
       <div
         style={{ ...handleBase, bottom: -5, right: -5, cursor: 'se-resize' }}
         onPointerDown={(e) => startResize(e, 'se')}
+        title='Resize (proportional)'
+      />
+      {/* South – bottom centre */}
+      <div
+        style={{ ...handleBase, bottom: -5, left: '50%', transform: 'translateX(-50%)', cursor: 's-resize' }}
+        onPointerDown={(e) => startResize(e, 's')}
+        title='Resize height'
+      />
+      {/* South-West – bottom left */}
+      <div
+        style={{ ...handleBase, bottom: -5, left: -5, cursor: 'sw-resize' }}
+        onPointerDown={(e) => startResize(e, 'sw')}
+        title='Resize (proportional)'
+      />
+      {/* West – left centre */}
+      <div
+        style={{ ...handleBase, top: '50%', left: -5, transform: 'translateY(-50%)', cursor: 'ew-resize' }}
+        onPointerDown={(e) => startResize(e, 'w')}
+        title='Resize width'
+      />
+      {/* North-West – top left */}
+      <div
+        style={{ ...handleBase, top: -5, left: -5, cursor: 'nw-resize' }}
+        onPointerDown={(e) => startResize(e, 'nw')}
         title='Resize (proportional)'
       />
     </>
@@ -146,7 +187,6 @@ function VideoResizer({
 // ─── YouTube component ────────────────────────────────────────────────────────
 
 type YouTubeComponentProps = Readonly<{
-  className: Readonly<{ base: string; focus: string }>;
   format: ElementFormatType | null;
   nodeKey: NodeKey;
   videoID: string;
@@ -156,7 +196,6 @@ type YouTubeComponentProps = Readonly<{
 }>;
 
 function YouTubeComponent({
-  className,
   format,
   nodeKey,
   videoID,
@@ -164,10 +203,55 @@ function YouTubeComponent({
   height,
   editor,
 }: YouTubeComponentProps) {
+  const wrapperRef   = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = React.useState(false);
-  const [isResizing, setIsResizing] = React.useState(false);
+  const iframeRef    = React.useRef<HTMLIFrameElement>(null);
+  // Synchronous ref so onMouseLeave always reads the current resize state.
+  const isResizingRef = React.useRef(false);
 
+  const [isNodeSelected, setNodeSelected, clearNodeSelection] = useLexicalNodeSelection(nodeKey);
+  const [isHovered,  setIsHovered]  = React.useState(false);
+  const [isResizing, setIsResizing] = React.useState(false);
+  // When true the thumbnail is replaced by the live <iframe> in-place.
+  const [isPlaying,  setIsPlaying]  = React.useState(false);
+
+  // ── Lexical command registration ──────────────────────────────────────────
+  React.useEffect(() => {
+    return mergeRegister(
+      editor.registerCommand(
+        FORMAT_ELEMENT_COMMAND,
+        (formatType: ElementFormatType) => {
+          if (isNodeSelected) {
+            editor.update(() => {
+              const node = $getNodeByKey(nodeKey);
+              if ($isYouTubeNode(node)) node.setFormat(formatType);
+            });
+            return true;
+          }
+          return false;
+        },
+        COMMAND_PRIORITY_LOW,
+      ),
+      // Select this node on click.  When the thumbnail is shown the <img> is
+      // in the parent DOM so CLICK_COMMAND fires naturally.  When the iframe is
+      // live, clicks land in the iframe's browsing context — the node stays
+      // selected via wrapperRef boundary detection on the wrapper div.
+      editor.registerCommand(
+        CLICK_COMMAND,
+        (event: MouseEvent) => {
+          if (wrapperRef.current?.contains(event.target as Node)) {
+            if (!event.shiftKey) clearNodeSelection();
+            setNodeSelected(true);
+            return true;
+          }
+          return false;
+        },
+        COMMAND_PRIORITY_LOW,
+      ),
+    );
+  }, [editor, isNodeSelected, nodeKey, clearNodeSelection, setNodeSelected]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -177,72 +261,182 @@ function YouTubeComponent({
     });
   };
 
+  const handleResizeStart = () => {
+    isResizingRef.current = true;
+    setIsResizing(true);
+    // Disable iframe pointer-events immediately so pointermove events during
+    // the drag are not swallowed by the iframe's browsing context.
+    if (iframeRef.current) iframeRef.current.style.pointerEvents = 'none';
+  };
+
   const handleResizeEnd = (w: number, h: number) => {
+    isResizingRef.current = false;
     setIsResizing(false);
+    if (iframeRef.current) iframeRef.current.style.pointerEvents = '';
+    // Keep controls visible so the user can resize again without re-hovering.
+    setIsHovered(true);
     editor.update(() => {
       const node = $getNodeByKey(nodeKey);
-      if ($isYouTubeNode(node)) {
-        node.setSize(Math.round(w), Math.round(h));
-      }
+      if ($isYouTubeNode(node)) node.setSize(Math.round(w), Math.round(h));
     });
   };
 
+  // Shared style for the small action buttons (delete / stop).
+  const actionBtnStyle = (side: 'left' | 'right'): React.CSSProperties => ({
+    position: 'absolute',
+    top: 8,
+    [side]: 8,
+    width: 28,
+    height: 28,
+    borderRadius: '50%',
+    background: 'rgba(0,0,0,0.65)',
+    color: '#fff',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: side === 'right' ? 18 : 14,
+    lineHeight: 1,
+    padding: 0,
+    zIndex: 10,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  });
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <BlockWithAlignableContents className={className} format={format} nodeKey={nodeKey}>
+    <div ref={wrapperRef} style={{ display: 'block', textAlign: format || undefined }}>
       <div
         ref={containerRef}
-        style={{ position: 'relative', display: 'inline-block', width, height, lineHeight: 0 }}
+        style={{
+          position: 'relative',
+          display: 'inline-block',
+          width,
+          height,
+          lineHeight: 0,
+          outline: isNodeSelected ? '2px solid #0078d4' : undefined,
+          outlineOffset: 2,
+        }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => {
-          if (!isResizing) setIsHovered(false);
+          if (!isResizingRef.current) setIsHovered(false);
         }}>
-        <iframe
-          width='100%'
-          height='100%'
-          src={`https://www.youtube.com/embed/${videoID}`}
-          allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-          allowFullScreen={true}
-          title='YouTube video'
-          style={{ display: 'block', border: 'none', pointerEvents: isResizing ? 'none' : 'auto' }}
-        />
 
-        {isHovered && (
+        {isPlaying ? (
+          /* ── Playing state ─────────────────────────────────────────────────
+           * Show the real YouTube iframe in-place at the same dimensions.
+           * autoplay=1 starts playback immediately.
+           * pointer-events are set to 'none' during resize (handleResizeStart)
+           * so drag events are not lost to the iframe's browsing context.     */
+          <iframe
+            ref={iframeRef}
+            width='100%'
+            height='100%'
+            src={`https://www.youtube.com/embed/${videoID}?autoplay=1`}
+            sandbox='allow-same-origin allow-scripts allow-popups allow-presentation'
+            allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+            allowFullScreen={true}
+            title='YouTube video'
+            style={{ display: 'block', border: 'none' }}
+          />
+        ) : (
+          /* ── Thumbnail state ───────────────────────────────────────────────
+           * Static <img> keeps all clicks in the parent DOM so Lexical's
+           * CLICK_COMMAND fires correctly and the node can be selected.
+           * Clicking the red ▶ badge switches to playing state.              */
           <>
+            <img
+              src={`https://img.youtube.com/vi/${videoID}/hqdefault.jpg`}
+              alt='YouTube video'
+              draggable={false}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+                userSelect: 'none',
+                cursor: 'pointer',
+              }}
+            />
+
+            {/* Red play badge — no stopPropagation so CLICK_COMMAND still
+                fires and the node is selected at the same time. */}
+            <div
+              role='button'
+              aria-label='Play video'
+              onClick={() => setIsPlaying(true)}
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 56,
+                height: 56,
+                background: 'rgba(255, 0, 0, 0.85)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}>
+              <span style={{ color: '#fff', fontSize: 20, lineHeight: 1, marginLeft: 5 }}>▶</span>
+            </div>
+          </>
+        )}
+
+        {/* Controls — shown on hover or during a resize drag.
+            VideoResizer is hidden while the iframe is live so that resize
+            handles don't interfere with normal video interaction; the user
+            should stop playback first, then resize.                          */}
+        {(isHovered || isResizing) && (
+          <>
+            {/* Delete — always top-right */}
             <button
               type='button'
               onClick={handleDelete}
               title='Remove video'
-              style={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                background: 'rgba(0,0,0,0.65)',
-                color: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 18,
-                lineHeight: 1,
-                padding: 0,
-                zIndex: 10,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
+              style={actionBtnStyle('right')}>
               ×
             </button>
 
+            {/* Stop button (top-left) — shown only while the iframe is live */}
+            {isPlaying && (
+              <button
+                type='button'
+                onClick={(e) => { e.stopPropagation(); setIsPlaying(false); }}
+                title='Stop video'
+                style={actionBtnStyle('left')}>
+                ⏹
+              </button>
+            )}
+
+            {/* Open in browser — always visible in controls */}
+            <button
+              type='button'
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(`https://www.youtube.com/watch?v=${videoID}`, '_blank', 'noopener,noreferrer');
+              }}
+              title='Open in browser'
+              style={{
+                ...actionBtnStyle('left'),
+                top: isPlaying ? 44 : 8,   // stack below stop button when playing
+                fontSize: 13,
+              }}>
+              ↗
+            </button>
+
+            {/* Resize handles — shown in both thumbnail and playing states.
+                handleResizeStart disables iframe pointer-events via iframeRef
+                so drag events are not lost to the iframe's browsing context. */}
             <VideoResizer
               containerRef={containerRef}
-              onResizeStart={() => setIsResizing(true)}
+              onResizeStart={handleResizeStart}
               onResizeEnd={handleResizeEnd}
             />
           </>
         )}
       </div>
-    </BlockWithAlignableContents>
+    </div>
   );
 }
 
@@ -326,6 +520,9 @@ export class YouTubeNode extends DecoratorBlockNode {
     iframe.setAttribute('width', String(this.__width));
     iframe.setAttribute('height', String(this.__height));
     iframe.style.border = 'none';
+    // sandbox must be on the exported HTML too — not just the in-editor player —
+    // so that when consumers render the saved HTML the iframe is sandboxed.
+    iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-popups allow-presentation');
     iframe.setAttribute(
       'allow',
       'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
@@ -364,15 +561,9 @@ export class YouTubeNode extends DecoratorBlockNode {
     writable.__height = height;
   }
 
-  decorate(_editor: LexicalEditor, config: EditorConfig): JSX.Element {
-    const embedBlockTheme = config.theme.embedBlock || {};
-    const className = {
-      base: embedBlockTheme.base || '',
-      focus: embedBlockTheme.focus || '',
-    };
+  decorate(_editor: LexicalEditor, _config: EditorConfig): JSX.Element {
     return (
       <YouTubeComponent
-        className={className}
         format={this.__format}
         nodeKey={this.getKey()}
         videoID={this.__id}

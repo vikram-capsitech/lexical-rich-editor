@@ -71,7 +71,7 @@ export const FontFamilyPlugin = ({ disabled = false }: { disabled?: boolean }) =
         }
       });
     },
-    [editor, disabled]
+    [editor, disabled],
   );
 
   return (

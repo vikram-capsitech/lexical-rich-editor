@@ -244,9 +244,6 @@ export class ImageNode extends DecoratorNode<JSX.Element> {
     const writable = this.getWritable();
     writable.__width = width;
     writable.__height = height;
-    if (typeof width === 'number' && width > writable.__maxWidth) {
-      writable.__maxWidth = width;
-    }
   }
 
   setShowCaption(showCaption: boolean): void {

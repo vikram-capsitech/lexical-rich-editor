@@ -2,7 +2,6 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import {
   $deleteTableColumnAtSelection,
   $deleteTableRowAtSelection,
-  $getTableNodeFromLexicalNodeOrThrow,
   $insertTableColumnAtSelection,
   $insertTableRowAtSelection,
   $isTableCellNode,
@@ -11,9 +10,12 @@ import {
 } from '@lexical/table';
 import { mergeRegister } from '@lexical/utils';
 import {
+  $createRangeSelection,
   $findMatchingParent,
+  $getNodeByKey,
   $getSelection,
   $isRangeSelection,
+  $setSelection,
   COMMAND_PRIORITY_HIGH,
   COMMAND_PRIORITY_LOW,
   KEY_DOWN_COMMAND,
@@ -51,9 +53,24 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
 
   const [isInTable, setIsInTable] = React.useState(false);
   const [anchorRect, setAnchorRect] = React.useState<DOMRect | null>(null);
+  const [contentRight, setContentRight] = React.useState<number | null>(null);
   const [open, setOpen] = React.useState(false);
+  const openRef = React.useRef(false);
+  const savedAnchorRef = React.useRef<{ key: string; offset: number; type: 'text' | 'element' } | null>(null);
+
+  const measureContentRight = React.useCallback((cellDom: HTMLElement): number | null => {
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(cellDom);
+      const cr = range.getBoundingClientRect();
+      return cr.width > 2 ? cr.right : null;
+    } catch {
+      return null;
+    }
+  }, []);
 
   const updateFromSelection = React.useCallback(() => {
+    if (openRef.current) return;
     const root = editor.getRootElement();
     if (!root) return;
 
@@ -67,6 +84,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
           if (dom) {
             setIsInTable(true);
             setAnchorRect(dom.getBoundingClientRect());
+            setContentRight(null);
             return;
           }
         }
@@ -75,6 +93,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       if (!$isRangeSelection(selection)) {
         setIsInTable(false);
         setAnchorRect(null);
+        setContentRight(null);
         return;
       }
 
@@ -86,6 +105,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       if (!cellNode || !$isTableCellNode(cellNode)) {
         setIsInTable(false);
         setAnchorRect(null);
+        setContentRight(null);
         return;
       }
 
@@ -93,13 +113,23 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       if (!cellDom) {
         setIsInTable(false);
         setAnchorRect(null);
+        setContentRight(null);
         return;
       }
 
       setIsInTable(true);
       setAnchorRect(cellDom.getBoundingClientRect());
+      setContentRight(measureContentRight(cellDom as HTMLElement));
+
+      if ($isRangeSelection(selection)) {
+        savedAnchorRef.current = {
+          key: selection.anchor.key,
+          offset: selection.anchor.offset,
+          type: selection.anchor.type as 'text' | 'element',
+        };
+      }
     });
-  }, [editor]);
+  }, [editor, measureContentRight]);
 
   React.useEffect(() => {
     return mergeRegister(
@@ -109,11 +139,11 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
           updateFromSelection();
           return false;
         },
-        COMMAND_PRIORITY_LOW
+        COMMAND_PRIORITY_LOW,
       ),
       editor.registerUpdateListener(() => {
         updateFromSelection();
-      })
+      }),
     );
   }, [editor, updateFromSelection]);
 
@@ -165,13 +195,10 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
             return false;
         }
       },
-      COMMAND_PRIORITY_HIGH
+      COMMAND_PRIORITY_HIGH,
     );
   }, [editor, disabled]);
 
-  React.useEffect(() => {
-    if (!isInTable && open) setOpen(false);
-  }, [isInTable, open]);
 
   const canShow = isInTable && !!anchorRect && !disabled;
 
@@ -179,7 +206,11 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
     if (!anchorRect) return undefined;
 
     const top = Math.max(8, anchorRect.top + 6);
-    const left = Math.max(8, anchorRect.right - 34);
+    const clampedCellRight = Math.min(anchorRect.right, window.innerWidth - 8);
+    // Place button right beside the content; fall back to near left edge when cell is empty
+    const left = contentRight !== null
+      ? Math.max(anchorRect.left + 4, Math.min(contentRight + 4, clampedCellRight - 32))
+      : Math.max(8, anchorRect.left + 8);
 
     return {
       position: 'fixed',
@@ -187,7 +218,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       left,
       zIndex: 9999,
     };
-  }, [anchorRect]);
+  }, [anchorRect, contentRight]);
 
   const dangerStyle: React.CSSProperties = {
     color: 'var(--colorPaletteRedForeground1)',
@@ -197,11 +228,20 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
     (fn: () => void) => {
       if (disabled) return;
 
-      editor.focus();
-      editor.update(() => fn());
+      openRef.current = false;
       setOpen(false);
+      editor.update(() => {
+        const saved = savedAnchorRef.current;
+        if (saved && $getNodeByKey(saved.key)) {
+          const sel = $createRangeSelection();
+          sel.anchor.set(saved.key, saved.offset, saved.type);
+          sel.focus.set(saved.key, saved.offset, saved.type);
+          $setSelection(sel);
+        }
+        fn();
+      });
     },
-    [disabled, editor]
+    [disabled, editor],
   );
 
   const insertRowBelow = () => run(() => $insertTableRowAtSelection(true));
@@ -213,42 +253,32 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
   const deleteRow = () => run(() => $deleteTableRowAtSelection());
   const deleteCol = () => run(() => $deleteTableColumnAtSelection());
 
-  const deleteTable = () =>
-    run(() => {
-      const selection = $getSelection();
-
-      if ($isTableSelection(selection)) {
-        const tableNode = selection.getNodes().find((n) => $isTableNode(n));
-        if (tableNode) tableNode.remove();
-        return;
-      }
-
-      if (!$isRangeSelection(selection)) return;
-
-      const node = selection.anchor.getNode();
-      const cell =
-        $findMatchingParent(node, (n) => $isTableCellNode(n)) ??
-        ($isTableCellNode(node) ? node : null);
-
-      if (!cell) return;
-
-      const table = $getTableNodeFromLexicalNodeOrThrow(cell);
-      table.remove();
+  const deleteTable = () => {
+    if (disabled) return;
+    openRef.current = false;
+    setOpen(false);
+    editor.update(() => {
+      const saved = savedAnchorRef.current;
+      if (!saved) return;
+      const anchorNode = $getNodeByKey(saved.key);
+      if (!anchorNode) return;
+      // Walk up the tree to find the enclosing table node, then remove it.
+      const tableNode = $findMatchingParent(anchorNode, (n) => $isTableNode(n));
+      if (tableNode) tableNode.remove();
     });
+  };
+
 
   if (!canShow || !handleStyle) return null;
 
   return createPortal(
-    <div style={handleStyle} className='aoTableActionHandleRoot'>
-      <Menu open={open} onOpenChange={(_, data) => setOpen(data.open)}>
+    <div style={handleStyle} className='aoTableActionHandleRoot' data-lexical-editor-portal='true'>
+      <Menu open={open} onOpenChange={(_, data) => { openRef.current = data.open; setOpen(data.open); }}>
         <MenuTrigger disableButtonEnhancement>
           <button
             type='button'
             className='aoTableActionHandleBtn'
-            aria-label='Table options'
-            onMouseDown={(e) => {
-              e.preventDefault();
-            }}>
+            aria-label='Table options'>
             <ChevronDown12Regular />
           </button>
         </MenuTrigger>
@@ -313,11 +343,12 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
               <MenuItem icon={<DeleteRegular />} onClick={deleteTable} style={dangerStyle}>
                 Delete table
               </MenuItem>
+
             </MenuGroup>
           </MenuList>
         </MenuPopover>
       </Menu>
     </div>,
-    document.body
+    document.body,
   );
 }

@@ -97,19 +97,19 @@ export const ColorPickerPlugin = ({ disabled }: { disabled: boolean }) => {
 
   const containerStyle: React.CSSProperties = disabled
     ? {
-        display: 'flex',
-        gap: 6,
-        alignItems: 'center',
-        opacity: 0.55,
-        cursor: 'not-allowed',
-        pointerEvents: 'none',
-        filter: 'grayscale(0.25)',
-      }
+      display: 'flex',
+      gap: 6,
+      alignItems: 'center',
+      opacity: 0.55,
+      cursor: 'not-allowed',
+      pointerEvents: 'none',
+      filter: 'grayscale(0.25)',
+    }
     : {
-        display: 'flex',
-        gap: 6,
-        alignItems: 'center',
-      };
+      display: 'flex',
+      gap: 6,
+      alignItems: 'center',
+    };
 
   const iconColor = disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#333333';
 
