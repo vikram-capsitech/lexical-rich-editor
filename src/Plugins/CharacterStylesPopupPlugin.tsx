@@ -32,6 +32,7 @@ import {
 } from 'lexical';
 import { JSX, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { getFixedPositionOrigin, useFloatingPortalContainer } from '../Utils/FloatingPortal';
 
 type UseCharacterStylesPopupOptions = {
   /** Overrides editor.isEditable() */
@@ -42,37 +43,6 @@ type UseCharacterStylesPopupOptions = {
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
-}
-
-/**
- * FIX: Portal container mounted inside the closest Panel/Layer so z-index/stacking works.
- * It creates a fixed overlay host that does not block clicks (pointer-events: none).
- */
-function useFloatingPortalContainer(editor: LexicalEditor) {
-  const [container, setContainer] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    const root = editor.getRootElement();
-    if (!root) return;
-
-    const panelOrLayer =
-      (root.closest('.ms-Panel-main') as HTMLElement | null) ||
-      (root.closest('.ms-Panel') as HTMLElement | null) ||
-      (root.closest('.ms-Layer') as HTMLElement | null) ||
-      document.body;
-
-    const host = document.createElement('div');
-    host.className = 'lexical-floating-ui-host';
-    panelOrLayer.appendChild(host);
-    setContainer(host);
-
-    return () => {
-      host.remove();
-      setContainer(null);
-    };
-  }, [editor]);
-
-  return container;
 }
 
 function setPopupPositionFixed(popupEl: HTMLElement, rect: DOMRect, topBoundary: number): void {
@@ -91,6 +61,15 @@ function setPopupPositionFixed(popupEl: HTMLElement, rect: DOMRect, topBoundary:
 
   // Clamp to viewport
   left = clamp(left, MARGIN, window.innerWidth - popupEl.offsetWidth - MARGIN);
+
+  // rect/window math above is all viewport coordinates, but if popupEl is
+  // portaled inside an ancestor that creates a new containing block (e.g. a
+  // sliding Fluent Panel animated with `transform`), `position: fixed`
+  // resolves against that ancestor's box instead of the viewport — shift
+  // into that ancestor's coordinate space so the popup lands next to the caret.
+  const origin = getFixedPositionOrigin(popupEl);
+  top -= origin.top;
+  left -= origin.left;
 
   popupEl.style.top = `${top}px`;
   popupEl.style.left = `${left}px`;

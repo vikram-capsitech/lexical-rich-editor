@@ -21,6 +21,7 @@ import * as React from 'react';
 import { Dispatch, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckmarkRegular, DeleteRegular, DismissRegular, EditRegular } from '@fluentui/react-icons';
+import { getFixedPositionOrigin, useFloatingPortalContainer } from '../Utils/FloatingPortal';
 import './FloatLink.css';
 
 export const getSelectedNode = ( selection: RangeSelection ): TextNode | ElementNode  => {
@@ -41,41 +42,6 @@ export const getSelectedNode = ( selection: RangeSelection ): TextNode | Element
 const VERTICAL_GAP = 10;
 const HORIZONTAL_OFFSET = 5;
 const VIEWPORT_MARGIN = 8;
-
-/**
- * Mounts a `position: fixed` overlay host inside the closest Fluent
- * Panel/Layer (or document.body) rather than deep inside the editor's own
- * DOM tree. Matches CharacterStylesPopupPlugin's `useFloatingPortalContainer`
- * — without it, a `position: absolute` popup nested inside the editor can
- * get clipped/hidden by a host Panel/Layer's own stacking context or an
- * ancestor's `overflow`, even though it renders with a valid opacity/rect.
- */
-function useFloatingPortalContainer(editor: LexicalEditor) {
-  const [container, setContainer] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    const root = editor.getRootElement();
-    if (!root) return;
-
-    const panelOrLayer =
-      (root.closest('.ms-Panel-main') as HTMLElement | null) ||
-      (root.closest('.ms-Panel') as HTMLElement | null) ||
-      (root.closest('.ms-Layer') as HTMLElement | null) ||
-      document.body;
-
-    const host = document.createElement('div');
-    host.className = 'lexical-floating-ui-host';
-    panelOrLayer.appendChild(host);
-    setContainer(host);
-
-    return () => {
-      host.remove();
-      setContainer(null);
-    };
-  }, [editor]);
-
-  return container;
-}
 
 export const setFloatingElemPositionForLinkEditor = (targetRect: DOMRect | null, floatingElem: HTMLElement, topBoundary: number = VIEWPORT_MARGIN, verticalGap: number = VERTICAL_GAP, horizontalOffset: number = HORIZONTAL_OFFSET): void => {
   if (targetRect === null) {
@@ -98,6 +64,16 @@ export const setFloatingElemPositionForLinkEditor = (targetRect: DOMRect | null,
   }
 
   left = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - floatingElemRect.width - VIEWPORT_MARGIN));
+
+  // targetRect/window math above is all in viewport coordinates, but if
+  // floatingElem is portaled inside an ancestor that creates a new
+  // containing block (e.g. a sliding Fluent Panel animated with
+  // `transform`), `position: fixed` resolves against that ancestor's box
+  // instead of the viewport — shift our viewport-space numbers into that
+  // ancestor's coordinate space so the popup still lands next to the caret.
+  const origin = getFixedPositionOrigin(floatingElem);
+  top -= origin.top;
+  left -= origin.left;
 
   floatingElem.style.opacity = '1';
   floatingElem.style.transform = 'none';

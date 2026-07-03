@@ -1,6 +1,8 @@
 import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
+import { useFloatingPortalContainer } from '../Utils/FloatingPortal';
 import './AoModal.css';
 
 export interface AoModalProps {
@@ -12,13 +14,12 @@ export interface AoModalProps {
   children: React.ReactNode;
 }
 
-const useIsomorphicLayoutEffect =
-  typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
-
 /**
- * Shared replacement for Dialog across the insert plugins.
- * Portals the modal content to the nearest editor root wrapper
- * to position it absolutely within the editor component's boundaries.
+ * Shared replacement for Dialog across the insert plugins. Portals the modal
+ * as a `position: fixed` overlay into the closest Fluent Panel/Layer (or
+ * document.body) instead of the editor's own root wrapper — the editor root
+ * is only ever as tall as its content, so an absolutely-positioned backdrop
+ * anchored there doesn't cover the page; it just renders in-flow after it.
  */
 export const AoModal = ({
   isOpen,
@@ -28,19 +29,8 @@ export const AoModal = ({
   actions,
   children,
 }: AoModalProps): JSX.Element | null => {
-  const [hostElement, setHostElement] = React.useState<Element | null>(null);
-  const mountRef = React.useRef<HTMLDivElement>(null);
-
-  useIsomorphicLayoutEffect(() => {
-    if (isOpen && mountRef.current) {
-      const root = mountRef.current.closest('.lexical-rich-editor-root');
-      if (root) {
-        setHostElement(root);
-      } else {
-        setHostElement(mountRef.current.parentElement);
-      }
-    }
-  }, [isOpen]);
+  const [editor] = useLexicalComposerContext();
+  const hostElement = useFloatingPortalContainer(editor);
 
   if (!isOpen) return null;
 
@@ -73,12 +63,9 @@ export const AoModal = ({
     </div>
   );
 
-  if (hostElement) {
-    return createPortal(modalContent, hostElement);
-  }
+  if (!hostElement) return null;
 
-  // Render a hidden mount helper to resolve the DOM context first
-  return <div ref={mountRef} style={{ display: 'none' }} />;
+  return createPortal(modalContent, hostElement);
 };
 
 export default AoModal;
