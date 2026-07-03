@@ -1,4 +1,5 @@
 import { ContentEditorLevel } from '../ContentEditorComponent.types';
+import { PageSetupValue } from './PageSetup';
 
 export enum RichTextPluginsType {
   Undo = 'undo', //
@@ -36,4 +37,6 @@ export const LOW_PRIORIRTY = 1;
 export interface IEditorProps {
   readOnly?: boolean;
   level: ContentEditorLevel;
+  pageSetup: PageSetupValue;
+  onPageSetupChange: (value: PageSetupValue) => void;
 }
