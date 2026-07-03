@@ -1,11 +1,15 @@
 import { Stack } from '@fluentui/react';
 import {
   Button,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  DialogTrigger,
   Field,
   Input,
-  Popover,
-  PopoverSurface,
-  PopoverTrigger,
 } from '@fluentui/react-components';
 import { VideoClipRegular } from '@fluentui/react-icons';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
@@ -39,14 +43,12 @@ export const YoutubeUploadPlugin = ({ disabled }: { disabled: boolean }) => {
   };
 
   return (
-    <Popover
-      trapFocus
-      withArrow
+    <Dialog
       open={disabled ? false : isOpen}
       onOpenChange={(_, data) => {
         if (!disabled) setIsOpen(data.open);
       }}>
-      <PopoverTrigger disableButtonEnhancement>
+      <DialogTrigger disableButtonEnhancement>
         <Button
           key='upload-video'
           title='Add youtube URL'
@@ -66,36 +68,35 @@ export const YoutubeUploadPlugin = ({ disabled }: { disabled: boolean }) => {
             setURL('');
           }}
         />
-      </PopoverTrigger>
+      </DialogTrigger>
 
-      <PopoverSurface
-        style={{
-          width: '270px',
-          opacity: disabled ? 0.6 : 1,
-          pointerEvents: disabled ? 'none' : 'auto',
-        }}>
-        <Stack tokens={{ childrenGap: 10 }}>
-          <Field label='URL' orientation='horizontal' size='small'>
-            <Input
-              autoFocus={!disabled}
-              disabled={disabled}
-              value={url}
-              appearance='underline'
-              placeholder='Add Youtube video URL'
-              onChange={(_, v) => setURL(v.value)}
-            />
-          </Field>
-
-          <Stack horizontal horizontalAlign='end' tokens={{ childrenGap: 6 }}>
+      <DialogSurface style={{ maxWidth: 320 }}>
+        <DialogBody>
+          <DialogTitle>Embed YouTube video</DialogTitle>
+          <DialogContent>
+            <Stack tokens={{ childrenGap: 8 }}>
+              <Field label='URL' size='small'>
+                <Input
+                  autoFocus={!disabled}
+                  disabled={disabled}
+                  value={url}
+                  appearance='underline'
+                  placeholder='Add Youtube video URL'
+                  onChange={(_, v) => setURL(v.value)}
+                />
+              </Field>
+            </Stack>
+          </DialogContent>
+          <DialogActions>
             <Button size='small' disabled={disabled || !url} onClick={onHandleEmbeded}>
               Add
             </Button>
             <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-          </Stack>
-        </Stack>
-      </PopoverSurface>
-    </Popover>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
   );
 };

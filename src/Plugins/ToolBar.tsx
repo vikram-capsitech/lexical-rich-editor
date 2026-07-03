@@ -578,7 +578,13 @@ export const ToolBarPlugins = (props: IEditorProps) => {
         return <ColorPickerPlugin key={key} disabled={!isEditable || props.readOnly!} />;
 
       case 'Link':
-        return <InsertLinkPlugin key={key} disabled={!isEditable || props.readOnly!} />;
+        return (
+          <InsertLinkPlugin
+            key={key}
+            disabled={!isEditable || props.readOnly!}
+            setIsLinkEditMode={props.setIsLinkEditMode}
+          />
+        );
 
       case 'Table':
         return <TableItemPlugin key={key} disabled={!isEditable || props.readOnly!} />;

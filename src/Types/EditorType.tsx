@@ -42,4 +42,5 @@ export interface IEditorProps {
   validationMessages?: ValidationMessages;
   pageSetup: PageSetupValue;
   onPageSetupChange: (value: PageSetupValue) => void;
+  setIsLinkEditMode: (isLinkEditMode: boolean) => void;
 }

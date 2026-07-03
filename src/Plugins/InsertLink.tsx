@@ -1,114 +1,61 @@
-import { Stack } from '@fluentui/react';
-import {
-  Button,
-  Field,
-  Input,
-  Popover,
-  PopoverSurface,
-  PopoverTrigger,
-} from '@fluentui/react-components';
+import { Button } from '@fluentui/react-components';
 import { LinkAddRegular } from '@fluentui/react-icons';
-import { $createLinkNode } from '@lexical/link';
+import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { $getSelection, $isRangeSelection, TextNode } from 'lexical';
-import { useState } from 'react';
+import { $findMatchingParent } from '@lexical/utils';
+import { $getSelection, $isRangeSelection } from 'lexical';
+import { getSelectedNode } from './FloatLinkEditor';
 
-export const InsertLinkPlugin = ({ disabled }: { disabled: boolean }) => {
+/**
+ * Toolbar entry point for inserting a link. Wraps the current selection in a
+ * link node (if it isn't one already) and hands off to the floating
+ * `FloatingLinkEditor` — the exact same UI used when editing an existing
+ * link — instead of a separate popover form.
+ */
+export const InsertLinkPlugin = ({
+  disabled,
+  setIsLinkEditMode,
+}: {
+  disabled: boolean;
+  setIsLinkEditMode: (isLinkEditMode: boolean) => void;
+}) => {
   const [editor] = useLexicalComposerContext();
-  const [isOpen, setIsOpen] = useState(false);
-  const [text, setText] = useState('');
-  const [link, setLink] = useState('');
 
   const iconColor = disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#333333';
 
-  const insertLink = (text: string, link: string) => {
+  const insertLink = () => {
     if (disabled) return;
 
     editor.update(() => {
-      setText('');
-      setLink('');
-
       const selection = $getSelection();
-      if ($isRangeSelection(selection)) {
-        const textNode = new TextNode(text);
-        const linkNode = $createLinkNode(link.startsWith('http') ? link : `https://${link}`);
-        linkNode.append(textNode);
-        selection.insertNodes([linkNode]);
-      }
+      if (!$isRangeSelection(selection)) return;
 
-      setIsOpen(false);
+      const node = getSelectedNode(selection);
+      const linkParent = $findMatchingParent(node, $isLinkNode);
+
+      if (!linkParent && !$isLinkNode(node)) {
+        editor.dispatchCommand(TOGGLE_LINK_COMMAND, 'https://');
+      }
     });
+
+    setIsLinkEditMode(true);
   };
 
   return (
-    <Popover
-      trapFocus
-      withArrow
-      open={disabled ? false : isOpen}
-      onOpenChange={(_, data) => {
-        if (!disabled) setIsOpen(data.open);
-      }}>
-      <PopoverTrigger disableButtonEnhancement>
-        <Button
-          size='small'
-          title='Add link'
-          key='upload-link'
-          disabled={disabled}
-          icon={<LinkAddRegular style={{ color: iconColor }} />}
-          style={{
-            background: isOpen && !disabled ? '#ebebeb' : 'none',
-            border: 'none',
-            margin: 2,
-            opacity: disabled ? 0.55 : 1,
-            cursor: disabled ? 'not-allowed' : 'pointer',
-          }}
-          onClick={() => {
-            if (!disabled) setIsOpen((prev) => !prev);
-          }}
-        />
-      </PopoverTrigger>
-
-      <PopoverSurface
-        style={{
-          width: '270px',
-          opacity: disabled ? 0.6 : 1,
-          pointerEvents: disabled ? 'none' : 'auto',
-        }}>
-        <Stack tokens={{ childrenGap: 10 }}>
-          <Field label='Text' orientation='horizontal' size='small'>
-            <Input
-              autoFocus={!disabled}
-              value={text}
-              appearance='underline'
-              placeholder='Text'
-              disabled={disabled}
-              onChange={(_, v) => setText(v.value)}
-            />
-          </Field>
-
-          <Field label='Link' orientation='horizontal' size='small'>
-            <Input
-              value={link}
-              appearance='underline'
-              placeholder='Link'
-              disabled={disabled}
-              onChange={(_, v) => setLink(v.value)}
-            />
-          </Field>
-
-          <Stack horizontal horizontalAlign='end' tokens={{ childrenGap: 6 }}>
-            <Button
-              size='small'
-              disabled={disabled || !text || !link}
-              onClick={() => insertLink(text, link)}>
-              Add
-            </Button>
-            <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
-              Cancel
-            </Button>
-          </Stack>
-        </Stack>
-      </PopoverSurface>
-    </Popover>
+    <Button
+      size='small'
+      title='Add link'
+      key='insert-link'
+      disabled={disabled}
+      icon={<LinkAddRegular style={{ color: iconColor }} />}
+      style={{
+        background: 'none',
+        border: 'none',
+        margin: 2,
+        opacity: disabled ? 0.55 : 1,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+      }}
+      onClick={insertLink}
+    />
   );
 };

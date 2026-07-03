@@ -574,7 +574,7 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
     return (
       <FluentProvider theme={webLightTheme} style={{ height: '100%' }}>
         <LexicalComposer initialConfig={initialConfig}>
-          <div ref={containerRef} style={{ height: '100%' }}>
+          <div ref={containerRef} className='lexical-rich-editor-root' style={{ height: '100%' }}>
             <Stack
               style={{
                 zIndex: 1000,
@@ -592,6 +592,7 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
                 flexDirection: 'column',
               }}>
               <div
+                className='editor-toolbar-root'
                 style={{
                   pointerEvents: isReadOnly ? 'none' : 'auto',
                   position: 'sticky',
@@ -605,6 +606,7 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
                   onPageSetupChange={setPageSetup}
                   maxImageSizeMB={props.maxImageSizeMB}
                   validationMessages={props.validationMessages}
+                  setIsLinkEditMode={setIsLinkEditMode}
                 />
               </div>
 

@@ -20,6 +20,7 @@ import {
 import * as React from 'react';
 import { Dispatch, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { CheckmarkRegular, DeleteRegular, DismissRegular, EditRegular } from '@fluentui/react-icons';
 import './FloatLink.css';
 
 export const getSelectedNode = ( selection: RangeSelection ): TextNode | ElementNode  => {
@@ -140,6 +141,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
     const rootElement = editor.getRootElement();
 
     if (
+      isLink &&
       selection !== null &&
       nativeSelection !== null &&
       rootElement !== null &&
@@ -163,7 +165,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
     }
 
     return true;
-  }, [anchorElem, editor, setIsLinkEditMode, isLinkEditMode, linkUrl]);
+  }, [anchorElem, editor, setIsLinkEditMode, isLinkEditMode, isLink, linkUrl]);
 
   useEffect(() => {
     const scrollerElem = anchorElem.parentElement;
@@ -289,24 +291,30 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
               monitorInputInteraction(event);
             }}
           />
-          <div>
+          <div className="link-input-actions">
             <div
               className="link-cancel"
               role="button"
               tabIndex={0}
+              title="Cancel"
+              aria-label="Cancel"
               onMouseDown={preventDefault}
               onClick={() => {
                 setIsLinkEditMode(false);
-              }}
-            />
+              }}>
+              <DismissRegular fontSize={16} />
+            </div>
 
             <div
               className="link-confirm"
               role="button"
               tabIndex={0}
+              title="Confirm"
+              aria-label="Confirm"
               onMouseDown={preventDefault}
-              onClick={handleLinkSubmission}
-            />
+              onClick={handleLinkSubmission}>
+              <CheckmarkRegular fontSize={16} />
+            </div>
           </div>
         </>
       ) : (
@@ -321,22 +329,28 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
             className="link-edit"
             role="button"
             tabIndex={0}
+            title="Edit link"
+            aria-label="Edit link"
             onMouseDown={preventDefault}
             onClick={(event) => {
               event.preventDefault();
               setEditedLinkUrl(linkUrl);
               setIsLinkEditMode(true);
-            }}
-          />
+            }}>
+            <EditRegular fontSize={16} />
+          </div>
           <div
             className="link-trash"
             role="button"
             tabIndex={0}
+            title="Remove link"
+            aria-label="Remove link"
             onMouseDown={preventDefault}
             onClick={() => {
               editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
-            }}
-          />
+            }}>
+            <DeleteRegular fontSize={16} />
+          </div>
         </div>
       )}
     </div>

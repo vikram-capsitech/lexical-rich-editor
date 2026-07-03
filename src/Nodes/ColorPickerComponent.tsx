@@ -366,7 +366,7 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
           directionalHint={4}
           className='aoColorCallout'
           preventDismissOnEvent={preventDismissOnEvent}>
-          <Stack tokens={{ childrenGap: 14 }} styles={{ root: { padding: '14px 16px 16px', width: 288 } }}>
+          <Stack tokens={{ childrenGap: 14 }} styles={{ root: { padding: '14px 16px 16px', width: 250 } }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#242424', letterSpacing: 0.1 }}>{title}</div>
@@ -378,8 +378,8 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 24,
-                  height: 24,
+                  width: 18,
+                  height: 18,
                   padding: 0,
                   border: 'none',
                   borderRadius: 4,
@@ -401,7 +401,7 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
               style={{
                 position: 'relative',
                 width: '100%',
-                height: 150,
+                height: 125,
                 borderRadius: 8,
                 overflow: 'hidden',
                 cursor: 'crosshair',
@@ -475,8 +475,8 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 20,
+                  height: 20,
                   borderRadius: 6,
                   flexShrink: 0,
                   background: hex,
@@ -515,10 +515,10 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
                       title={c}
                       aria-label={c}
                       style={{
-                        width: 22,
-                        height: 22,
+                        width: 18,
+                        height: 18,
                         padding: 0,
-                        borderRadius: 5,
+                        borderRadius: 4,
                         background: c,
                         cursor: 'pointer',
                         boxShadow: isSelected

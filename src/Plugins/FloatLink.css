@@ -3,39 +3,92 @@
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 10;
+  z-index: 10000010;
   max-width: 400px;
-  width: 100%;
+  width: max-content;
   opacity: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
   background-color: #fff;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
-  border-radius: 0 0 8px 8px;
-  transition: opacity 0.5s;
+  border-radius: 20px;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.14),
+    0 2px 10px rgba(0, 0, 0, 0.08);
+  transition: opacity 120ms ease;
   will-change: transform;
 }
 
-.link-editor .button {
-  width: 20px;
-  height: 20px;
-  display: inline-block;
-  padding: 6px;
-  border-radius: 8px;
+.link-input {
+  flex: 1;
+  min-width: 180px;
+  border: none;
+  outline: none;
+  background: #f1f1f1;
+  border-radius: 15px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #242424;
+}
+
+.link-input::placeholder {
+  color: #8a8a8a;
+}
+
+.link-input-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.link-cancel,
+.link-confirm,
+.link-edit,
+.link-trash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   cursor: pointer;
-  margin: 0 2px;
+  color: #616161;
+  flex: 0 0 auto;
 }
 
-.link-editor .button.hovered {
-  width: 20px;
-  height: 20px;
-  display: inline-block;
-  background-color: #eee;
+.link-cancel:hover,
+.link-edit:hover,
+.link-trash:hover {
+  background-color: #f0f0f0;
 }
 
-.link-editor .button i,
-.actions i {
-  background-size: contain;
-  display: inline-block;
-  height: 20px;
-  width: 20px;
-  vertical-align: -0.25em;
+.link-confirm {
+  background-color: #0f6cbd;
+  color: #fff;
+}
+
+.link-confirm:hover {
+  background-color: #115ea3;
+}
+
+.link-trash:hover {
+  color: #c4272c;
+}
+
+.link-view {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+}
+
+.link-view a {
+  color: #0f6cbd;
+  text-decoration: underline;
+  padding: 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
 }

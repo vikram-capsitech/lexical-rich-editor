@@ -1,13 +1,17 @@
 import { Stack } from '@fluentui/react';
 import {
   Button,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  DialogTrigger,
   Field,
   Input,
   MessageBar,
   MessageBarBody,
-  Popover,
-  PopoverSurface,
-  PopoverTrigger,
   SelectTabData,
   SelectTabEvent,
 } from '@fluentui/react-components';
@@ -84,7 +88,7 @@ const InsertImageByURL = ({
 
   return (
     <Stack tokens={{ childrenGap: 6, padding: '10px 0px 0px 0px' }}>
-      <Field label='Enter URL' orientation='horizontal' size='small'>
+      <Field label='Enter URL' size='small'>
         <Input
           autoFocus={!disabled}
           appearance='underline'
@@ -95,7 +99,7 @@ const InsertImageByURL = ({
         />
       </Field>
 
-      <Field label='Alt Text' orientation='horizontal' size='small'>
+      <Field label='Alt Text' size='small'>
         <Input
           placeholder='Alt text'
           key='alt-text-url'
@@ -210,14 +214,12 @@ export const InsertImageDialog = ({
   };
 
   return (
-    <Popover
-      trapFocus
-      withArrow
+    <Dialog
       open={disabled ? false : isOpen}
       onOpenChange={(_, data) => {
         if (!disabled) setIsOpen(data.open);
       }}>
-      <PopoverTrigger disableButtonEnhancement>
+      <DialogTrigger disableButtonEnhancement>
         <Button
           size='small'
           title='Add Image'
@@ -239,83 +241,82 @@ export const InsertImageDialog = ({
             setFileName('');
           }}
         />
-      </PopoverTrigger>
+      </DialogTrigger>
 
-      <PopoverSurface
-        style={{
-          width: '320px',
-          opacity: disabled ? 0.6 : 1,
-          pointerEvents: disabled ? 'none' : 'auto',
-        }}>
-        <Stack tokens={{ childrenGap: 6 }}>
-          <Field label='Upload' orientation='horizontal' size='small'>
-            <label
-              style={{
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                opacity: disabled ? 0.75 : 1,
-              }}>
-              <input
-                type='file'
-                accept='image/*'
-                key='inline-image-upload'
-                style={{ display: 'none' }}
-                disabled={disabled}
-                onChange={loadImage}
-              />
-
-              <Stack horizontal>
-                <AttachFilled
+      <DialogSurface style={{ maxWidth: 340 }}>
+        <DialogBody>
+          <DialogTitle>Insert image</DialogTitle>
+          <DialogContent>
+            <Stack tokens={{ childrenGap: 8 }}>
+              <Field label='Upload' size='small'>
+                <label
                   style={{
-                    fontSize: '16px',
-                    color: disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#808080',
-                    marginTop: 2,
-                  }}
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    opacity: disabled ? 0.75 : 1,
+                  }}>
+                  <input
+                    type='file'
+                    accept='image/*'
+                    key='inline-image-upload'
+                    style={{ display: 'none' }}
+                    disabled={disabled}
+                    onChange={loadImage}
+                  />
+
+                  <Stack horizontal>
+                    <AttachFilled
+                      style={{
+                        fontSize: '16px',
+                        color: disabled ? 'var(--colorNeutralForegroundDisabled, #A6A6A6)' : '#808080',
+                        marginTop: 2,
+                      }}
+                    />
+                    {!fileName && <span style={{ fontSize: 12, color: '#808080' }}>Upload File</span>}
+                  </Stack>
+
+                  {fileName && <span style={{ fontSize: 12, color: '#808080' }}>{fileName}</span>}
+                </label>
+              </Field>
+
+              {fileSizeError && (
+                <MessageBar intent='error' style={{ marginTop: 4 }}>
+                  <MessageBarBody>{fileSizeError}</MessageBarBody>
+                </MessageBar>
+              )}
+
+              <Field label='Alt Text' size='small'>
+                <Input
+                  placeholder='Alt text'
+                  appearance='underline'
+                  disabled={disabled}
+                  onChange={(_, d) => setAltText(d.value)}
+                  value={altText}
                 />
-                {!fileName && <span style={{ fontSize: 12, color: '#808080' }}>Upload File</span>}
-              </Stack>
+              </Field>
 
-              {fileName && <span style={{ fontSize: 12, color: '#808080' }}>{fileName}</span>}
-            </label>
-          </Field>
-
-          {fileSizeError && (
-            <MessageBar intent='error' style={{ marginTop: 4 }}>
-              <MessageBarBody>{fileSizeError}</MessageBarBody>
-            </MessageBar>
-          )}
-
-          <Field label='Alt Text' orientation='horizontal' size='small'>
-            <Input
-              placeholder='Alt text'
-              appearance='underline'
-              disabled={disabled}
-              onChange={(_, d) => setAltText(d.value)}
-              value={altText}
-            />
-          </Field>
-
-          <Stack horizontal horizontalAlign='end' tokens={{ childrenGap: 6 }}>
+              {selectedValue === 'URL' && (
+                <InsertImageByURL
+                  disabled={disabled}
+                  setIsOpen={(open) => setIsOpen(open)}
+                  onClick={(payload) => onClick(payload)}
+                />
+              )}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
             <Button size='small' disabled={isDisabled} onClick={() => onClick({ altText, src })}>
               Add
             </Button>
             <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-          </Stack>
-        </Stack>
-
-        {selectedValue === 'URL' && (
-          <InsertImageByURL
-            disabled={disabled}
-            setIsOpen={(open) => setIsOpen(open)}
-            onClick={(payload) => onClick(payload)}
-          />
-        )}
-      </PopoverSurface>
-    </Popover>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
   );
 };
 

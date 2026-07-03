@@ -1,11 +1,15 @@
 import { Stack } from '@fluentui/react';
 import {
   Button,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  DialogTrigger,
   Field,
   Input,
-  Popover,
-  PopoverSurface,
-  PopoverTrigger,
 } from '@fluentui/react-components';
 import { TableAddRegular } from '@fluentui/react-icons';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
@@ -39,14 +43,12 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
   };
 
   return (
-    <Popover
-      trapFocus
-      withArrow
+    <Dialog
       open={disabled ? false : isOpen}
       onOpenChange={(_, data) => {
         if (!disabled) setIsOpen(data.open);
       }}>
-      <PopoverTrigger disableButtonEnhancement>
+      <DialogTrigger disableButtonEnhancement>
         <Button
           size='small'
           title='Add table'
@@ -68,37 +70,36 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
             setColumns('');
           }}
         />
-      </PopoverTrigger>
+      </DialogTrigger>
 
-      <PopoverSurface
-        style={{
-          width: '270px',
-          opacity: disabled ? 0.6 : 1,
-          pointerEvents: disabled ? 'none' : 'auto',
-        }}>
-        <Stack tokens={{ childrenGap: 10 }}>
-          <Field label='Rows' orientation='horizontal' size='small'>
-            <Input
-              autoFocus={!disabled}
-              value={rows}
-              placeholder='Rows'
-              appearance='underline'
-              disabled={disabled}
-              onChange={(_, v) => setRows(v.value)}
-            />
-          </Field>
+      <DialogSurface style={{ maxWidth: 300 }}>
+        <DialogBody>
+          <DialogTitle>Insert table</DialogTitle>
+          <DialogContent>
+            <Stack tokens={{ childrenGap: 8 }}>
+              <Field label='Rows' size='small'>
+                <Input
+                  autoFocus={!disabled}
+                  value={rows}
+                  placeholder='Rows'
+                  appearance='underline'
+                  disabled={disabled}
+                  onChange={(_, v) => setRows(v.value)}
+                />
+              </Field>
 
-          <Field label='Columns' orientation='horizontal' size='small'>
-            <Input
-              value={columns}
-              placeholder='Columns'
-              appearance='underline'
-              disabled={disabled}
-              onChange={(_, v) => setColumns(v.value)}
-            />
-          </Field>
-
-          <Stack horizontal horizontalAlign='end' tokens={{ childrenGap: 6 }}>
+              <Field label='Columns' size='small'>
+                <Input
+                  value={columns}
+                  placeholder='Columns'
+                  appearance='underline'
+                  disabled={disabled}
+                  onChange={(_, v) => setColumns(v.value)}
+                />
+              </Field>
+            </Stack>
+          </DialogContent>
+          <DialogActions>
             <Button
               size='small'
               appearance='primary'
@@ -110,9 +111,9 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
             <Button size='small' disabled={disabled} onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-          </Stack>
-        </Stack>
-      </PopoverSurface>
-    </Popover>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
   );
 };

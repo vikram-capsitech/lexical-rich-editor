@@ -75,16 +75,19 @@ function useFloatingPortalContainer(editor: LexicalEditor) {
   return container;
 }
 
-function setPopupPositionFixed(popupEl: HTMLElement, rect: DOMRect): void {
+function setPopupPositionFixed(popupEl: HTMLElement, rect: DOMRect, topBoundary: number): void {
   const GAP = 8;
   const MARGIN = 8;
 
-  // Prefer above selection, right-aligned
+  // Prefer above the cursor, with the popup's left edge starting at the
+  // cursor position — i.e. anchored to the bottom-right of the caret —
+  // rather than right-aligning the popup's edge to it.
   let top = rect.top - popupEl.offsetHeight - GAP;
-  let left = rect.left + rect.width - popupEl.offsetWidth;
+  let left = rect.left;
 
-  // If off top, show below
-  if (top < MARGIN) top = rect.bottom + GAP;
+  // If there isn't room above the selection without crossing the toolbar
+  // (or the viewport edge), show below the selection instead.
+  if (top < topBoundary) top = rect.bottom + GAP;
 
   // Clamp to viewport
   left = clamp(left, MARGIN, window.innerWidth - popupEl.offsetWidth - MARGIN);
@@ -160,11 +163,37 @@ function FloatingCharacterStylesEditor({
       return;
     }
 
-    const range = sel.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
+    // Anchor to the selection's focus point (where the user's cursor
+    // currently sits) rather than the full range's bounding box. For a
+    // multi-line selection the range's bounding rect spans every selected
+    // line — right-aligning to that box's edge can land the popup far from
+    // any actual text. A collapsed rect at the focus offset always sits
+    // exactly at the caret, matching how Lexical's own playground behaves.
+    let rect: DOMRect;
+    try {
+      const focusRange = document.createRange();
+      focusRange.setStart(sel.focusNode!, sel.focusOffset);
+      focusRange.setEnd(sel.focusNode!, sel.focusOffset);
+      rect = focusRange.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0 && rect.top === 0 && rect.left === 0) {
+        throw new Error('empty focus rect');
+      }
+    } catch {
+      rect = sel.getRangeAt(0).getBoundingClientRect();
+    }
+
+    // Never render above the top of the editor's own chrome (toolbar) — the
+    // toolbar is a sibling of the content-editable root, not an ancestor, so
+    // walk up to their shared wrapper first.
+    const toolbarEl = root
+      ?.closest('.lexical-rich-editor-root')
+      ?.querySelector('.editor-toolbar-root') as HTMLElement | null;
+    const topBoundary = toolbarEl
+      ? toolbarEl.getBoundingClientRect().bottom + 8
+      : 8;
 
     if (!mouseDownRef.current) {
-      setPopupPositionFixed(popupEl, rect as DOMRect);
+      setPopupPositionFixed(popupEl, rect as DOMRect, topBoundary);
     }
 
     popupEl.classList.add('is-open');
@@ -390,6 +419,21 @@ function useCharacterStylesPopup(
         return;
       }
 
+      // A Callout/Popover (color picker, insert-link, insert-table, …) can be
+      // open while the browser's document selection still sits inside the
+      // editor — hide this popup whenever focus has actually moved into one
+      // of those, so the two floating surfaces never overlap.
+      const activeElement = document.activeElement;
+      if (
+        activeElement &&
+        activeElement !== document.body &&
+        rootElement &&
+        !rootElement.contains(activeElement)
+      ) {
+        setIsText(false);
+        return;
+      }
+
       if (!$isRangeSelection(selection)) return;
 
       const node = getSelectedNode(selection);
@@ -415,7 +459,14 @@ function useCharacterStylesPopup(
 
   useEffect(() => {
     document.addEventListener('selectionchange', updatePopupState);
-    return () => document.removeEventListener('selectionchange', updatePopupState);
+    // Focusing a Callout/Popover control doesn't always fire selectionchange,
+    // so listen for focus moves directly too (see the activeElement check
+    // inside updatePopupState).
+    document.addEventListener('focusin', updatePopupState);
+    return () => {
+      document.removeEventListener('selectionchange', updatePopupState);
+      document.removeEventListener('focusin', updatePopupState);
+    };
   }, [updatePopupState]);
 
   useEffect(() => editor.registerUpdateListener(updatePopupState), [editor, updatePopupState]);
