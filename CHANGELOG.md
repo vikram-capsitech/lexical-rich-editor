@@ -2,6 +2,18 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.3.0] — 2026-07-03
+
+### Changed
+- Insert Link now reuses the same floating link editor used to edit/remove existing links (pill-shaped input with cancel/confirm on add, link preview with edit/delete on existing links) instead of a separate Popover form with Text/Link fields.
+- Table, Image, Inline Image, and YouTube insert popovers converted from Fluent `Popover` to compact `Dialog` modals; their fields switched from horizontal to vertical label orientation, which was clipping labels and misrendering the input underline at the narrower dialog widths.
+
+### Fixed
+- The floating character-style toolbar (bold/italic/etc.) could render on top of the main toolbar when text was selected near the top of the editor; it now measures the toolbar's real bottom edge and flips below it when there isn't room above.
+- The floating character-style toolbar could stay visible and overlap a Callout/Popover (e.g. the color picker) opened elsewhere, since focusing a popover control doesn't always fire `selectionchange`; it now hides as soon as focus leaves the editor for another floating surface.
+- The floating link editor (`.link-editor`) could render as a visible empty box under any selected text, not just links, because its position/visibility update never actually checked whether the selection was inside a link.
+- The floating character-style toolbar positioned itself using the full selection range's bounding box, which for multi-line selections could place it far from any actual text; it now anchors to the selection's focus point (the cursor), matching Lexical's own playground behavior, and aligns bottom-right of the caret instead of bottom-left.
+
 ## [1.2.1] — 2026-07-03
 
 ### Fixed

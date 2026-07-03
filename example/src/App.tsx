@@ -426,6 +426,7 @@ export default function App() {
   const [showOutput, setShowOutput] = useState(true);
   const [showProps, setShowProps] = useState(false);
   const [showRefApi, setShowRefApi] = useState(false);
+  const [showDeprecationNotice, setShowDeprecationNotice] = useState(true);
   const editorRef = useRef<ContentEditorRef>(null);
   const { copied, copy } = useCopy();
 
@@ -559,11 +560,65 @@ function MyEditor() {
                 fontFamily: "monospace",
               }}
             >
-              v1.2.1
+              v1.3.0
             </span>
           </div>
         </div>
       </nav>
+
+      {/* ── Deprecation notice ── */}
+      {showDeprecationNotice && (
+        <div
+          style={{
+            background: "#fffbeb",
+            borderBottom: "1px solid #fde68a",
+            padding: "10px 40px",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 1200,
+              margin: "0 auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              fontSize: 13,
+              color: "#92400e",
+            }}
+          >
+            <span aria-hidden="true">⚠️</span>
+            <span style={{ flex: 1 }}>
+              Versions <strong>1.0.0 – 1.2.1</strong> are deprecated. Please upgrade to{" "}
+              <strong>v1.3.0</strong> for the latest fixes and features. See the{" "}
+              <a
+                href="https://github.com/vikram-capsitech/lexical-rich-editor/blob/main/CHANGELOG.md"
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: "#92400e", fontWeight: 700 }}
+              >
+                changelog
+              </a>
+              .
+            </span>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={() => setShowDeprecationNotice(false)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#92400e",
+                fontSize: 15,
+                lineHeight: 1,
+                padding: 4,
+              }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Hero ── */}
       <div
