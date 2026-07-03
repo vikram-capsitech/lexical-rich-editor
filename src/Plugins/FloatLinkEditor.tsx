@@ -17,12 +17,10 @@ import {
   KEY_ESCAPE_COMMAND,
   LexicalEditor, RangeSelection, SELECTION_CHANGE_COMMAND, TextNode
 } from 'lexical';
+import { Button, Popover, PopoverSurface } from '@fluentui/react-components';
+import { CheckmarkRegular, DeleteRegular, DismissRegular, EditRegular } from '@fluentui/react-icons';
 import * as React from 'react';
 import { Dispatch, useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { CheckmarkRegular, DeleteRegular, DismissRegular, EditRegular } from '@fluentui/react-icons';
-import { getFixedPositionOrigin, useFloatingPortalContainer } from '../Utils/FloatingPortal';
-import './FloatLink.css';
 
 export const getSelectedNode = ( selection: RangeSelection ): TextNode | ElementNode  => {
   const anchor = selection.anchor;
@@ -38,47 +36,6 @@ export const getSelectedNode = ( selection: RangeSelection ): TextNode | Element
   } else {
     return $isAtNodeEnd(anchor) ? anchorNode : focusNode;
   }
-}
-const VERTICAL_GAP = 10;
-const HORIZONTAL_OFFSET = 5;
-const VIEWPORT_MARGIN = 8;
-
-export const setFloatingElemPositionForLinkEditor = (targetRect: DOMRect | null, floatingElem: HTMLElement, topBoundary: number = VIEWPORT_MARGIN, verticalGap: number = VERTICAL_GAP, horizontalOffset: number = HORIZONTAL_OFFSET): void => {
-  if (targetRect === null) {
-    floatingElem.style.opacity = '0';
-    floatingElem.style.transform = 'translate(-10000px, -10000px)';
-    return;
-  }
-
-  const floatingElemRect = floatingElem.getBoundingClientRect();
-
-  let top = targetRect.bottom + verticalGap;
-  let left = targetRect.left - horizontalOffset;
-
-  if (top + floatingElemRect.height > window.innerHeight - VIEWPORT_MARGIN) {
-    top = targetRect.top - floatingElemRect.height - verticalGap;
-  }
-
-  if (top < topBoundary) {
-    top = topBoundary;
-  }
-
-  left = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - floatingElemRect.width - VIEWPORT_MARGIN));
-
-  // targetRect/window math above is all in viewport coordinates, but if
-  // floatingElem is portaled inside an ancestor that creates a new
-  // containing block (e.g. a sliding Fluent Panel animated with
-  // `transform`), `position: fixed` resolves against that ancestor's box
-  // instead of the viewport — shift our viewport-space numbers into that
-  // ancestor's coordinate space so the popup still lands next to the caret.
-  const origin = getFixedPositionOrigin(floatingElem);
-  top -= origin.top;
-  left -= origin.left;
-
-  floatingElem.style.opacity = '1';
-  floatingElem.style.transform = 'none';
-  floatingElem.style.top = `${top}px`;
-  floatingElem.style.left = `${left}px`;
 }
 
 const SUPPORTED_URL_PROTOCOLS = new Set([
@@ -106,6 +63,8 @@ const preventDefault = ( event: React.KeyboardEvent<HTMLInputElement> | React.Mo
   event.preventDefault();
 }
 
+type VirtualTarget = { getBoundingClientRect: () => DOMRect };
+
 interface IFloatingLinkEditor {
   isLink: boolean;
   editor: LexicalEditor;
@@ -113,11 +72,21 @@ interface IFloatingLinkEditor {
   setIsLink: Dispatch<boolean>;
   setIsLinkEditMode: Dispatch<boolean>;
 }
+
+/**
+ * Anchored via Fluent's Popover with a virtual positioning target (the
+ * current selection's bounding rect) instead of a hand-rolled
+ * `position: fixed` + portal. Popover positions itself with floating-ui
+ * (which correctly accounts for transformed/scrolling ancestors) and is
+ * styled with Griffel (CSS-in-JS injected at runtime by
+ * @fluentui/react-components itself), so it doesn't depend on this
+ * package's own CSS file being imported by the consuming app.
+ */
 const FloatingLinkEditor = ({editor, isLink, setIsLink, isLinkEditMode, setIsLinkEditMode}: IFloatingLinkEditor): JSX.Element => {
   const [editedLinkUrl, setEditedLinkUrl] = useState('https://');
   const [lastSelection, setLastSelection] = useState<BaseSelection | null>( null);
   const [linkUrl, setLinkUrl] = useState('');
-  const editorRef = useRef<HTMLDivElement | null>(null);
+  const [target, setTarget] = useState<VirtualTarget | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const $updateLinkEditor = useCallback(() => {
@@ -137,14 +106,9 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, isLinkEditMode, setIsLin
         setEditedLinkUrl(linkUrl);
       }
     }
-    const editorElem = editorRef.current;
+
     const nativeSelection = getDOMSelection(editor._window);
     const activeElement = document.activeElement;
-
-    if (editorElem === null) {
-      return;
-    }
-
     const rootElement = editor.getRootElement();
 
     if (
@@ -158,17 +122,11 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, isLinkEditMode, setIsLin
       const domRect: DOMRect | undefined =
         nativeSelection.focusNode?.parentElement?.getBoundingClientRect();
       if (domRect) {
-        const toolbarEl = rootElement
-          .closest('.lexical-rich-editor-root')
-          ?.querySelector('.editor-toolbar-root') as HTMLElement | null;
-        const topBoundary = toolbarEl ? toolbarEl.getBoundingClientRect().bottom + 8 : 8;
-        setFloatingElemPositionForLinkEditor(domRect, editorElem, topBoundary);
+        setTarget({ getBoundingClientRect: () => domRect });
       }
       setLastSelection(selection);
-    } else if (!activeElement || activeElement.className !== 'aoLinkInput') {
-      if (rootElement !== null) {
-        setFloatingElemPositionForLinkEditor(null, editorElem);
-      }
+    } else if (!(activeElement instanceof HTMLInputElement) || activeElement !== inputRef.current) {
+      setTarget(null);
       setLastSelection(null);
       setIsLinkEditMode(false);
       setLinkUrl('');
@@ -283,95 +241,111 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, isLinkEditMode, setIsLin
   };
 
   return (
-    <div ref={editorRef} className="aoLinkEditor">
-      {!isLink ? null : isLinkEditMode ? (
-        <>
-          <input
-            ref={inputRef}
-            className="aoLinkInput"
-            value={editedLinkUrl}
-            onChange={(event) => {
-              setEditedLinkUrl(event.target.value);
-            }}
-            onKeyDown={(event) => {
-              monitorInputInteraction(event);
-            }}
-          />
-          <div className="aoLinkInputActions">
-            <div
-              className="aoLinkCancel"
-              role="button"
-              tabIndex={0}
+    <Popover
+      open={isLink && !!target}
+      onOpenChange={(_, data) => {
+        if (!data.open) setIsLink(false);
+      }}
+      positioning={{ target: target ?? undefined, position: 'below', align: 'start' }}
+      unstable_disableAutoFocus
+    >
+      <PopoverSurface style={{ display: 'flex', alignItems: 'center', gap: 6, padding: 8, maxWidth: 360 }}>
+        {isLinkEditMode ? (
+          <>
+            <input
+              ref={inputRef}
+              value={editedLinkUrl}
+              style={{
+                flex: 1,
+                minWidth: 180,
+                border: 'none',
+                outline: 'none',
+                background: '#f1f1f1',
+                borderRadius: 15,
+                padding: '8px 12px',
+                fontSize: 14,
+              }}
+              onChange={(event) => {
+                setEditedLinkUrl(event.target.value);
+              }}
+              onKeyDown={(event) => {
+                monitorInputInteraction(event);
+              }}
+            />
+            <Button
+              appearance="subtle"
+              size="small"
+              icon={<DismissRegular fontSize={16} />}
               title="Cancel"
               aria-label="Cancel"
               onMouseDown={preventDefault}
               onClick={() => {
                 setIsLinkEditMode(false);
-              }}>
-              <DismissRegular fontSize={16} />
-            </div>
-
-            <div
-              className="aoLinkConfirm"
-              role="button"
-              tabIndex={0}
+              }}
+            />
+            <Button
+              appearance="primary"
+              size="small"
+              icon={<CheckmarkRegular fontSize={16} />}
               title="Confirm"
               aria-label="Confirm"
               onMouseDown={preventDefault}
-              onClick={handleLinkSubmission}>
-              <CheckmarkRegular fontSize={16} />
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="aoLinkView">
-          <a
-            href={sanitizeUrl(linkUrl)}
-            target="_blank"
-            rel="noopener noreferrer">
-            {linkUrl}
-          </a>
-          <div
-            className="aoLinkEdit"
-            role="button"
-            tabIndex={0}
-            title="Edit link"
-            aria-label="Edit link"
-            onMouseDown={preventDefault}
-            onClick={(event) => {
-              event.preventDefault();
-              setEditedLinkUrl(linkUrl);
-              setIsLinkEditMode(true);
-            }}>
-            <EditRegular fontSize={16} />
-          </div>
-          <div
-            className="aoLinkTrash"
-            role="button"
-            tabIndex={0}
-            title="Remove link"
-            aria-label="Remove link"
-            onMouseDown={preventDefault}
-            onClick={() => {
-              editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
-            }}>
-            <DeleteRegular fontSize={16} />
-          </div>
-        </div>
-      )}
-    </div>
+              onClick={handleLinkSubmission}
+            />
+          </>
+        ) : (
+          <>
+            <a
+              href={sanitizeUrl(linkUrl)}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '0 8px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: 260,
+              }}>
+              {linkUrl}
+            </a>
+            <Button
+              appearance="subtle"
+              size="small"
+              icon={<EditRegular fontSize={16} />}
+              title="Edit link"
+              aria-label="Edit link"
+              onMouseDown={preventDefault}
+              onClick={(event) => {
+                event.preventDefault();
+                setEditedLinkUrl(linkUrl);
+                setIsLinkEditMode(true);
+              }}
+            />
+            <Button
+              appearance="subtle"
+              size="small"
+              icon={<DeleteRegular fontSize={16} />}
+              title="Remove link"
+              aria-label="Remove link"
+              onMouseDown={preventDefault}
+              onClick={() => {
+                editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+              }}
+            />
+          </>
+        )}
+      </PopoverSurface>
+    </Popover>
   );
 }
 
 const useFloatingLinkEditorToolbar = (
   editor: LexicalEditor,
-  anchorElem: HTMLElement | null,
   isLinkEditMode: boolean,
   setIsLinkEditMode: Dispatch<boolean>
-): JSX.Element | null => {
+): JSX.Element => {
   const [activeEditor, setActiveEditor] = useState(editor);
   const [isLink, setIsLink] = useState(false);
-  const portalContainer = useFloatingPortalContainer(editor);
 
   useEffect(() => {
     function $updateToolbar() {
@@ -422,19 +396,14 @@ const useFloatingLinkEditorToolbar = (
     );
   }, [editor]);
 
-  if (!anchorElem || !(anchorElem instanceof HTMLElement) || !portalContainer) {
-    return null; // Prevent rendering if anchorElem or the portal host isn't ready
-  }
-
-  return createPortal(
+  return (
     <FloatingLinkEditor
       isLink={isLink}
       editor={activeEditor}
       setIsLink={setIsLink}
       isLinkEditMode={isLinkEditMode}
       setIsLinkEditMode={setIsLinkEditMode}
-    />,
-    portalContainer
+    />
   );
 };
 interface IFloatingLinkEditorPlugin {
@@ -442,15 +411,11 @@ interface IFloatingLinkEditorPlugin {
   isLinkEditMode: boolean;
   setIsLinkEditMode: Dispatch<boolean>;
 }
-export const FloatingLinkEditorPlugin = ({ anchorElem, isLinkEditMode, setIsLinkEditMode}: IFloatingLinkEditorPlugin): JSX.Element | null => {
+export const FloatingLinkEditorPlugin = ({ isLinkEditMode, setIsLinkEditMode}: IFloatingLinkEditorPlugin): JSX.Element | null => {
   const [editor] = useLexicalComposerContext();
-
-  // Ensure anchorElem is a valid DOM element, otherwise fallback to document.body
-  const validAnchorElem = anchorElem && anchorElem instanceof HTMLElement ? anchorElem : document.body;
 
   return useFloatingLinkEditorToolbar(
     editor,
-    validAnchorElem,
     isLinkEditMode,
     setIsLinkEditMode
   );
