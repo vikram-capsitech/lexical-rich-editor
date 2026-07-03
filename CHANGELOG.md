@@ -15,6 +15,39 @@ All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
 ### Fixed
 - Insert Link no longer double-prefixes URLs that already include a scheme (e.g. `https://ftp://...`) and now correctly leaves `mailto:`, `tel:`, `#fragment`, and `/relative` links untouched; added inline validation for structurally invalid URLs.
+## [1.2.0] — 2026-07-02
+
+### Added
+- **Page Setup toolbar control** (Standard/Pro levels) — a Google Docs-style dropdown for Page size (Pageless plus 11 standard paper sizes: A4, Letter, Legal, Tabloid, A3, A5, B4, B5, Statement, Executive, Folio), Orientation (Portrait/Landscape), and Margins (Narrow/Normal/Moderate/Wide). Selecting a page size constrains the editing canvas to that paper width (96px/inch), centers it, and renders it as a white page sheet with a shadow on a neutral canvas background — a purely visual "page view," not multi-page pagination; content still scrolls continuously and does not auto-split across pages. Orientation and Margins are disabled while Pageless is selected. State is internal to the component (not currently persisted or exposed as a controlled prop).
+
+### Fixed
+- `getValue()` and the `onChange` HTML output no longer emit the doubled `<b><strong>text</strong></b>` markup that Lexical's `exportDOM` produces for bold text (`createDOM` uses `<strong>` for the live editable view; `exportDOM` additionally wraps it in `<b>` for email-client compatibility). The existing `postProcessOutput()` sanitizer — which already collapsed this pattern along with the equivalent `<i><em>` case — was written but never wired into the actual output paths; it's now applied in both `CustomOnChangePlugin` and `RefApiPlugin.getValue()`.
+- Color picker: reworked the color-commit model back to live pointer-driven updates (saturation/value square and hue slider now commit continuously via Pointer Capture, rather than requiring a separate Apply click introduced in 1.1.0). Uses `setPointerCapture` on pointer-down so drag events keep targeting the picker even if focus shifts mid-drag, addressing the underlying focus-contention issue from 1.0.7–1.0.11 directly rather than by avoiding live updates. Popover header redesigned with a single Close (✕) button in place of separate Apply/Close buttons; hex field now live-commits once its value is a complete `#rgb`/`#rrggbb` token instead of requiring blur.
+
+## [1.1.0] — 2026-06-30
+
+### Changed
+- Color picker redesigned around a click-to-pick, explicit-Apply model instead of live-applying color while dragging. Clicking the saturation/value box, the hue bar, a preset swatch, or editing the hex field now only updates the picker's local draft (hex field, swatches, and thumbs all still update live) — nothing is written to the editor until **Apply** is clicked. **Close** discards the draft entirely.
+- This removes the entire class of bug investigated in 1.0.7–1.0.11: continuously calling into the editor on every `mousemove` depended on Lexical syncing DOM selection/focus dozens of times a second while a separate popover legitimately held focus, which in at least one production environment fought badly enough that a drag's `mouseup` was sometimes never delivered to `window` — leaving the drag "stuck" and silently overwriting the document with whatever color a later, unrelated stray cursor movement happened to compute. The editor is now only ever touched once per picker session, by a single deliberate user action, so pointer-event delivery issues can no longer corrupt document content.
+- Removed the temporary `[AO-ColorPicker]` diagnostic logging added in 1.0.9 — no longer needed.
+- `useDrag` and the `interactingRef`/drag-release dismiss-suppression machinery it required have been removed from `ColorPickerComponent.tsx` as dead complexity now that there's no continuous drag tracking.
+
+## [1.0.11] — 2026-06-30
+
+### Fixed
+- The 1.0.10 fix reduced but did not eliminate the focus tug-of-war: a fresh diagnostic log from a real repro showed `commitHsv -> onChange` continuing to fire dozens of times with no further user input after a single discrete action (a hex field blur, not a drag), settling on `#ffffff`. This means a previous drag's `mouseup` never reached `window` (most likely a side effect of the same focus churn interrupting native event delivery), leaving the saturation/value and hue drag's `mousemove` listener permanently attached — so any subsequent stray cursor movement anywhere on the page kept recomputing and re-applying a color clamped to whatever screen edge the cursor drifted toward.
+- The picker's saturation/value and hue drag handlers no longer call into the editor (`onChange`/`applyStyle`) on every `mousemove`. They now only update local preview state (hex field, swatches, thumbs — still fully live during the drag) on each move, and commit to the editor exactly once, on drag end (mouseup) or a plain click. This means even if a `mouseup` is missed for any reason, stray pointer movement can no longer silently keep overwriting the document — it can only affect the picker's own internal preview, which is recoverable by closing the popover.
+
+## [1.0.10] — 2026-06-30
+
+### Fixed
+- Root-caused via diagnostic logging from a real consuming app: opening the color picker moves DOM focus into Fluent's `Callout` (portaled outside the editor's container), which `FocusEventsPlugin` correctly treats as "left the editor" and nulls the Lexical selection for. That alone was already handled (selection is restored from a saved bookmark before every style application). The actual bug was that Lexical's own reconciler force-focuses the editor root on *every* `editor.update()` that touches selection when the root doesn't already have focus — which, while the picker is open, is always true. That forced focus fought Fluent's Callout for focus on every single drag-driven color commit, repeatedly bouncing focus (and the selection null/restore cycle) between the editor and the popover, which could desync the in-progress drag from the cursor and ultimately apply the wrong color.
+- `applyStyle` now tags its `editor.update()` calls with Lexical's `SKIP_SELECTION_FOCUS_TAG` so style application never forces DOM focus while the picker is open. Focus is returned to the editor exactly once, when the picker actually closes — and only if the editor was the active surface right before the picker opened (captured via a new `onOpenChange` callback on `ColorPickerControl`, fired before Fluent's `setInitialFocus` can steal focus, since checking "is the editor active" at apply-time is meaningless once a popover is already open).
+
+## [1.0.9] — 2026-06-30 (diagnostic build)
+
+### Added
+- Temporary `console.log`/`console.warn` instrumentation (prefixed `[AO-ColorPicker]`) across the color-application pipeline: incoming `value` prop changes, open-popover seeding, every commit path (drag, preset click, hex field blur), selection capture/restore in `applyStyle`, the readback in `updateToolbar`, and `FocusEventsPlugin`'s focusout/selection-clear handling. Intended to diagnose a color-picker issue reported as still present in a consuming web app after 1.0.7/1.0.8 — no behavior changes. **Should be reverted once diagnosis is complete.**
 
 ## [1.0.8] — 2026-06-29
 

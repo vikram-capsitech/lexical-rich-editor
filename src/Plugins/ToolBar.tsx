@@ -80,6 +80,7 @@ import { InsertImageDialog } from './ImagePlugin';
 import { InsertInlineImageDialog } from './InlineImage';
 import { InsertLinkPlugin } from './InsertLink';
 import { INSERT_PAGE_BREAK } from './PageBreak';
+import { PageSetupPlugin } from './PageSetup';
 import { TableItemPlugin } from './Table';
 import { YoutubeUploadPlugin } from './Youtube';
 
@@ -118,7 +119,8 @@ type ToolbarToken =
   | 'FontSize'
   | 'Decorators'
   | 'CodeBlock'
-  | 'Align';
+  | 'Align'
+  | 'PageSetup';
 
 const ALLOWED_TOKENS: Record<ToolbarToken, true> = {
   '|': true,
@@ -138,6 +140,7 @@ const ALLOWED_TOKENS: Record<ToolbarToken, true> = {
   Decorators: true,
   CodeBlock: true,
   Align: true,
+  PageSetup: true,
 };
 
 /**
@@ -764,6 +767,16 @@ export const ToolBarPlugins = (props: IEditorProps) => {
           </Dropdown>
         );
       }
+
+      case 'PageSetup':
+        return (
+          <PageSetupPlugin
+            key={key}
+            disabled={!isEditable || props.readOnly}
+            value={props.pageSetup}
+            onChange={props.onPageSetupChange}
+          />
+        );
 
       default:
         return null;

@@ -29,7 +29,8 @@ export function getToolbarGroupsByLevel(level: ContentEditorLevel): string[][] {
         ['FontFamily', '|'],
         ['FontSize', '|'],
         ['Decorators', '|'],
-        ['Align'],
+        ['Align', '|'],
+        ['PageSetup'],
       ];
 
     case ContentEditorLevel.Pro:
@@ -44,7 +45,8 @@ export function getToolbarGroupsByLevel(level: ContentEditorLevel): string[][] {
         ['FontFamily', '|'],
         ['FontSize', '|'],
         ['Decorators', '|'],
-        ['Align'],
+        ['Align', '|'],
+        ['PageSetup'],
       ];
   }
 }

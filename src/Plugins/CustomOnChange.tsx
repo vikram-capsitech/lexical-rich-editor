@@ -3,6 +3,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { $getRoot, $setSelection } from 'lexical';
 import { useCallback, useEffect, useRef } from 'react';
+import { postProcessOutput } from '../Utils/Sanitize';
 
 interface ICustomOnChangePluginProps {
   value: string;
@@ -49,7 +50,7 @@ export const CustomOnChangePlugin = ({ value, onChange }: ICustomOnChangePluginP
   // moved to another field (e.g. Subject).
   const handleChange = useCallback((editorState: any) => {
     editorState.read(() => {
-      onChangeRef.current($generateHtmlFromNodes(editor));
+      onChangeRef.current(postProcessOutput($generateHtmlFromNodes(editor)));
     });
   }, [editor]);
 

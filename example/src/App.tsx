@@ -1018,6 +1018,9 @@ function MyEditor() {
                     __html:
                       htmlValue || '<em style="color:#94a3b8">(empty)</em>',
                   }}
+                  className="editor"
+                  style={{ padding: '15px 20px', maxHeight: 220, overflowY: 'auto', color: '#1e293b', background: '#fff' }}
+                  dangerouslySetInnerHTML={{ __html: htmlValue || '<em style="color:#94a3b8">(empty)</em>' }}
                 />
               ))}
           </div>
