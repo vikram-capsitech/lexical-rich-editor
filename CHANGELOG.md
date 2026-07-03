@@ -2,6 +2,20 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.0.9] — 2026-07-03
+
+### Added
+- Unified "+ Insert" toolbar menu (Table, Image, Inline Image, YouTube) replacing separate toolbar buttons, with responsive overflow so the toolbar no longer wraps onto multiple rows on narrow viewports.
+- Inline images are now resizable via the same drag-handle resizer used by block images.
+- `data-testid="color-sv-box"` / `data-testid="color-hue-bar"` on the color picker's saturation/value box and hue slider for stable test selectors.
+
+### Changed
+- Table, Image, YouTube, Inline Image, and Insert Link dialogs migrated from Fluent UI `Popover` to centered `Dialog` overlays for consistent modal behavior across all insert flows.
+- Table insertion now enforces a 50×50 row/column limit with inline validation, preventing browser-freezing table sizes.
+
+### Fixed
+- Insert Link no longer double-prefixes URLs that already include a scheme (e.g. `https://ftp://...`) and now correctly leaves `mailto:`, `tel:`, `#fragment`, and `/relative` links untouched; added inline validation for structurally invalid URLs.
+
 ## [1.0.8] — 2026-06-29
 
 ### Fixed

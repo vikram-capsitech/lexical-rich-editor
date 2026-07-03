@@ -4,6 +4,7 @@ import { useLexicalNodeSelection } from '@lexical/react/useLexicalNodeSelection'
 import { mergeRegister } from '@lexical/utils';
 import type { BaseSelection, LexicalEditor, NodeKey } from 'lexical';
 import {
+  $getNodeByKey,
   $getSelection,
   $isNodeSelection,
   $setSelection,
@@ -17,6 +18,7 @@ import {
   SELECTION_CHANGE_COMMAND
 } from 'lexical';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import ImageResizer from '../Utils/ImageResizer';
 import './InlineImage.css';
 import type { Position } from './InlineImageNode';
 import { $isInlineImageNode } from './InlineImageNode';
@@ -79,6 +81,37 @@ const InlineImageComponent = ({ src, altText, nodeKey, width, height, showCaptio
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [editor] = useLexicalComposerContext();
   const isEditable = useLexicalEditable();
+  const [isResizing, setIsResizing] = useState<boolean>(false);
+
+  const onResizeEnd = (
+    nextWidth: 'inherit' | number,
+    nextHeight: 'inherit' | number,
+  ) => {
+    // Delay hiding the resize bars for click case
+    setTimeout(() => {
+      setIsResizing(false);
+    }, 200);
+
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey);
+      if ($isInlineImageNode(node)) {
+        node.setWidthAndHeight(nextWidth, nextHeight);
+      }
+    });
+  };
+
+  const onResizeStart = () => {
+    setIsResizing(true);
+  };
+
+  const setShowCaption = (show: boolean) => {
+    editor.update(() => {
+      const node = $getNodeByKey(nodeKey);
+      if ($isInlineImageNode(node)) {
+        node.setShowCaption(show);
+      }
+    });
+  };
 
   const $onDelete = useCallback(
     (payload: KeyboardEvent) => {
@@ -169,6 +202,9 @@ const InlineImageComponent = ({ src, altText, nodeKey, width, height, showCaptio
         CLICK_COMMAND,
         (payload) => {
           const event = payload;
+          if (isResizing) {
+            return true;
+          }
           if (event.target === imageRef.current) {
             if (event.shiftKey) {
               setSelected(!isSelected);
@@ -220,6 +256,7 @@ const InlineImageComponent = ({ src, altText, nodeKey, width, height, showCaptio
   }, [
     clearSelection,
     editor,
+    isResizing,
     isSelected,
     nodeKey,
     $onDelete,
@@ -228,10 +265,11 @@ const InlineImageComponent = ({ src, altText, nodeKey, width, height, showCaptio
     setSelected,
   ]);
 
-  const draggable = isSelected && $isNodeSelection(selection);
-  const isFocused = isSelected && isEditable;
+  const draggable = isSelected && $isNodeSelection(selection) && !isResizing;
+  const isFocused = (isSelected || isResizing) && isEditable;
   return (
     <Suspense fallback={null}>
+      <>
         <span draggable={draggable}>
           <LazyImage
             className={
@@ -247,6 +285,19 @@ const InlineImageComponent = ({ src, altText, nodeKey, width, height, showCaptio
             position={position}
           />
         </span>
+        {isFocused && $isNodeSelection(selection) && (
+          <ImageResizer
+            showCaption={showCaption}
+            setShowCaption={setShowCaption}
+            editor={editor}
+            buttonRef={buttonRef}
+            imageRef={imageRef}
+            onResizeStart={onResizeStart}
+            onResizeEnd={onResizeEnd}
+            captionsEnabled={false}
+          />
+        )}
+      </>
     </Suspense>
   );
 }

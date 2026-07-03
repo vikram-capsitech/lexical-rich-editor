@@ -392,14 +392,22 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon }: P
               ))}
             </div>
 
-            <div className='aoLexSV' ref={svRef} onMouseDown={startSV}>
+            <div
+              className='aoLexSV'
+              data-testid='color-sv-box'
+              ref={svRef}
+              onMouseDown={startSV}>
               <div className='aoLexSVHue' style={{ background: hueColor }} />
               <div className='aoLexSVWhite' />
               <div className='aoLexSVBlack' />
               <div className='aoLexSVThumb' style={svThumb} />
             </div>
 
-            <div className='aoLexHue' ref={hueRef} onMouseDown={startHue}>
+            <div
+              className='aoLexHue'
+              data-testid='color-hue-bar'
+              ref={hueRef}
+              onMouseDown={startHue}>
               <div className='aoLexHueThumb' style={hueThumb} />
             </div>
 

@@ -1,3 +1,4 @@
+import { Checkmark16Regular, Delete16Regular, Dismiss16Regular, Edit16Regular } from '@fluentui/react-icons';
 import {
   $createLinkNode,
   $isAutoLinkNode,
@@ -140,6 +141,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
     const rootElement = editor.getRootElement();
 
     if (
+      isLink &&
       selection !== null &&
       nativeSelection !== null &&
       rootElement !== null &&
@@ -163,7 +165,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
     }
 
     return true;
-  }, [anchorElem, editor, setIsLinkEditMode, isLinkEditMode, linkUrl]);
+  }, [anchorElem, editor, isLink, setIsLinkEditMode, isLinkEditMode, linkUrl]);
 
   useEffect(() => {
     const scrollerElem = anchorElem.parentElement;
@@ -281,6 +283,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
           <input
             ref={inputRef}
             className="link-input"
+            placeholder="https://"
             value={editedLinkUrl}
             onChange={(event) => {
               setEditedLinkUrl(event.target.value);
@@ -289,24 +292,28 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
               monitorInputInteraction(event);
             }}
           />
-          <div>
-            <div
-              className="link-cancel"
-              role="button"
-              tabIndex={0}
+          <div className="link-actions">
+            <button
+              type="button"
+              className="link-icon-btn link-cancel"
+              title="Cancel"
+              aria-label="Cancel"
               onMouseDown={preventDefault}
               onClick={() => {
                 setIsLinkEditMode(false);
-              }}
-            />
+              }}>
+              <Dismiss16Regular />
+            </button>
 
-            <div
-              className="link-confirm"
-              role="button"
-              tabIndex={0}
+            <button
+              type="button"
+              className="link-icon-btn link-confirm"
+              title="Confirm"
+              aria-label="Confirm"
               onMouseDown={preventDefault}
-              onClick={handleLinkSubmission}
-            />
+              onClick={handleLinkSubmission}>
+              <Checkmark16Regular />
+            </button>
           </div>
         </>
       ) : (
@@ -317,26 +324,32 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, anchorElem, isLinkEditMo
             rel="noopener noreferrer">
             {linkUrl}
           </a>
-          <div
-            className="link-edit"
-            role="button"
-            tabIndex={0}
-            onMouseDown={preventDefault}
-            onClick={(event) => {
-              event.preventDefault();
-              setEditedLinkUrl(linkUrl);
-              setIsLinkEditMode(true);
-            }}
-          />
-          <div
-            className="link-trash"
-            role="button"
-            tabIndex={0}
-            onMouseDown={preventDefault}
-            onClick={() => {
-              editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
-            }}
-          />
+          <div className="link-actions">
+            <button
+              type="button"
+              className="link-icon-btn link-edit"
+              title="Edit link"
+              aria-label="Edit link"
+              onMouseDown={preventDefault}
+              onClick={(event) => {
+                event.preventDefault();
+                setEditedLinkUrl(linkUrl);
+                setIsLinkEditMode(true);
+              }}>
+              <Edit16Regular />
+            </button>
+            <button
+              type="button"
+              className="link-icon-btn link-trash"
+              title="Remove link"
+              aria-label="Remove link"
+              onMouseDown={preventDefault}
+              onClick={() => {
+                editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+              }}>
+              <Delete16Regular />
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -10,6 +10,12 @@ import { test, expect, Page } from '@playwright/test';
  * overwrite an in-progress pick the instant the mouse was released or the
  * popover was reopened. Fixed in src/Nodes/ColorPickerComponent.tsx by only
  * seeding from `value` on the closed -> open transition.
+ *
+ * The picker commits every preset click, hex edit, and SV/hue drag straight
+ * through `onChange` as it happens (live commit) — there is no separate
+ * "Apply" step to wait on, so these tests assert the applied color directly
+ * after the triggering interaction. The picker is closed by toggling its
+ * trigger button (no "Close" button in the flow being tested).
  */
 
 function hexToRgbString(hex: string): string {
@@ -51,7 +57,13 @@ async function dblClickWord(page: Page, word: string) {
   await page.mouse.dblclick(point.x, point.y);
 }
 
+/** Opens the picker; calling this again while open toggles it closed (same trigger button). */
 async function openPicker(page: Page, title: 'Text color' | 'Background color') {
+  await page.getByTitle(title).click();
+}
+
+/** Closes the picker via its trigger button — there is no dedicated "Close" button. */
+async function closePicker(page: Page, title: 'Text color' | 'Background color') {
   await page.getByTitle(title).click();
 }
 
@@ -63,14 +75,6 @@ async function setCustomHex(page: Page, hex: string) {
   const input = page.locator('.aoLexRow:has-text("Hex") input');
   await input.fill(hex);
   await input.blur();
-}
-
-async function clickApply(page: Page) {
-  await page.getByRole('button', { name: 'Apply' }).click();
-}
-
-async function clickClose(page: Page) {
-  await page.getByRole('button', { name: 'Close' }).click();
 }
 
 /** Reads the computed `color`/`backgroundColor` of the element wrapping a given text run. */
@@ -93,45 +97,53 @@ async function computedStyleOfText(
   }, { text, prop });
 }
 
+/** Polls the computed style since live-commit updates flow through React/Lexical asynchronously. */
+async function expectComputedStyle(
+  page: Page,
+  text: string,
+  prop: 'color' | 'backgroundColor',
+  expected: string,
+) {
+  await expect
+    .poll(() => computedStyleOfText(page, text, prop))
+    .toBe(expected);
+}
+
 test.describe('Color picker — text & background color', () => {
-  test('applies a preset text color to selected text', async ({ page }) => {
+  test('applies a preset text color live on selection, with no Apply step', async ({ page }) => {
     await gotoHarness(page);
     await selectAllEditorText(page);
     await openPicker(page, 'Text color');
     await pickPreset(page, '#ff0000');
-    await clickApply(page);
 
-    expect(await computedStyleOfText(page, 'AAAA', 'color')).toBe(hexToRgbString('#ff0000'));
+    await expectComputedStyle(page, 'AAAA', 'color', hexToRgbString('#ff0000'));
   });
 
-  test('applies a custom (hex-entered) text color to selected text', async ({ page }) => {
+  test('applies a custom (hex-entered) text color live on blur, with no Apply step', async ({ page }) => {
     await gotoHarness(page);
     await selectAllEditorText(page);
     await openPicker(page, 'Text color');
     await setCustomHex(page, '#123abc');
-    await clickApply(page);
 
-    expect(await computedStyleOfText(page, 'AAAA', 'color')).toBe(hexToRgbString('#123abc'));
+    await expectComputedStyle(page, 'AAAA', 'color', hexToRgbString('#123abc'));
   });
 
-  test('applies a preset background color to selected text', async ({ page }) => {
+  test('applies a preset background color live on selection, with no Apply step', async ({ page }) => {
     await gotoHarness(page);
     await selectAllEditorText(page);
     await openPicker(page, 'Background color');
     await pickPreset(page, '#00ff00');
-    await clickApply(page);
 
-    expect(await computedStyleOfText(page, 'AAAA', 'backgroundColor')).toBe(hexToRgbString('#00ff00'));
+    await expectComputedStyle(page, 'AAAA', 'backgroundColor', hexToRgbString('#00ff00'));
   });
 
-  test('applies a custom (hex-entered) background color to selected text', async ({ page }) => {
+  test('applies a custom (hex-entered) background color live on blur, with no Apply step', async ({ page }) => {
     await gotoHarness(page);
     await selectAllEditorText(page);
     await openPicker(page, 'Background color');
     await setCustomHex(page, '#654321');
-    await clickApply(page);
 
-    expect(await computedStyleOfText(page, 'AAAA', 'backgroundColor')).toBe(hexToRgbString('#654321'));
+    await expectComputedStyle(page, 'AAAA', 'backgroundColor', hexToRgbString('#654321'));
   });
 
   test('reflects the applied color after closing and reopening the picker', async ({ page }) => {
@@ -139,7 +151,7 @@ test.describe('Color picker — text & background color', () => {
     await selectAllEditorText(page);
     await openPicker(page, 'Text color');
     await pickPreset(page, '#0000ff');
-    await clickClose(page);
+    await closePicker(page, 'Text color');
 
     await openPicker(page, 'Text color');
     const hexInput = page.locator('.aoLexRow:has-text("Hex") input');
@@ -151,23 +163,22 @@ test.describe('Color picker — text & background color', () => {
     await selectAllEditorText(page);
     await openPicker(page, 'Text color');
     await pickPreset(page, '#ff9900');
-    await clickApply(page);
 
-    expect(await computedStyleOfText(page, 'AAAA', 'color')).toBe(hexToRgbString('#ff9900'));
+    await expectComputedStyle(page, 'AAAA', 'color', hexToRgbString('#ff9900'));
 
     await page.getByTestId('force-rerender').click();
     await page.getByTestId('force-rerender').click();
 
-    expect(await computedStyleOfText(page, 'AAAA', 'color')).toBe(hexToRgbString('#ff9900'));
+    await expectComputedStyle(page, 'AAAA', 'color', hexToRgbString('#ff9900'));
   });
 
-  test('clicking Apply does not submit the surrounding form', async ({ page }) => {
+  test('selecting a preset color does not submit the surrounding form', async ({ page }) => {
     await gotoHarness(page);
     await selectAllEditorText(page);
     await openPicker(page, 'Text color');
     await pickPreset(page, '#9900ff');
-    await clickApply(page);
 
+    await expectComputedStyle(page, 'AAAA', 'color', hexToRgbString('#9900ff'));
     await expect(page.getByTestId('submit-count')).toHaveText('0');
   });
 
@@ -176,7 +187,6 @@ test.describe('Color picker — text & background color', () => {
     await selectAllEditorText(page);
     await openPicker(page, 'Text color');
     await pickPreset(page, '#4a86e8');
-    await clickApply(page);
 
     // Lexical's HTML export normalizes inline color values through the
     // browser's CSSStyleDeclaration, so the stored HTML contains the
@@ -189,9 +199,8 @@ test.describe('Color picker — text & background color', () => {
     await dblClickWord(page, 'AAAA');
     await openPicker(page, 'Text color');
     await pickPreset(page, '#ff0000');
-    await clickApply(page);
 
-    expect(await computedStyleOfText(page, 'AAAA', 'color')).toBe(hexToRgbString('#ff0000'));
+    await expectComputedStyle(page, 'AAAA', 'color', hexToRgbString('#ff0000'));
     expect(await computedStyleOfText(page, 'BBBB', 'color')).not.toBe(hexToRgbString('#ff0000'));
   });
 
@@ -208,7 +217,7 @@ test.describe('Color picker — text & background color', () => {
     await selectAllEditorText(page);
     await openPicker(page, 'Text color');
 
-    const sv = page.locator('.aoLexSV');
+    const sv = page.getByTestId('color-sv-box');
     const box = await sv.boundingBox();
     if (!box) throw new Error('SV picker not visible');
 
@@ -227,9 +236,6 @@ test.describe('Color picker — text & background color', () => {
     expect(draggedHex.toLowerCase()).not.toBe('#ffffff');
     expect(draggedHex.toLowerCase()).not.toBe('#000000');
 
-    await clickApply(page);
-    expect((await computedStyleOfText(page, 'AAAA', 'color'))?.toLowerCase()).toBe(
-      hexToRgbString(draggedHex),
-    );
+    await expectComputedStyle(page, 'AAAA', 'color', hexToRgbString(draggedHex));
   });
 });
