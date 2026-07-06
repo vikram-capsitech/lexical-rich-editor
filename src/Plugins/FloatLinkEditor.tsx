@@ -9,6 +9,7 @@ import { $isAtNodeEnd } from '@lexical/selection';
 import { $findMatchingParent, mergeRegister } from '@lexical/utils';
 import {
   $getSelection, $isRangeSelection,
+  $setSelection,
   BaseSelection,
   CLICK_COMMAND,
   COMMAND_PRIORITY_CRITICAL,
@@ -91,19 +92,20 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, isLinkEditMode, setIsLin
 
   const $updateLinkEditor = useCallback(() => {
     const selection = $getSelection();
+    let hasLink = false;
     if ($isRangeSelection(selection)) {
       const node = getSelectedNode(selection);
       const linkParent = $findMatchingParent(node, $isLinkNode);
+      hasLink = !!linkParent || $isLinkNode(node);
 
-      if (linkParent) {
-        setLinkUrl(linkParent.getURL());
-      } else if ($isLinkNode(node)) {
-        setLinkUrl(node.getURL());
-      } else {
-        setLinkUrl('');
-      }
+      const url = linkParent
+        ? linkParent.getURL()
+        : $isLinkNode(node)
+          ? node.getURL()
+          : '';
+      setLinkUrl(url);
       if (isLinkEditMode) {
-        setEditedLinkUrl(linkUrl);
+        setEditedLinkUrl(url);
       }
     }
 
@@ -112,7 +114,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, isLinkEditMode, setIsLin
     const rootElement = editor.getRootElement();
 
     if (
-      isLink &&
+      hasLink &&
       selection !== null &&
       nativeSelection !== null &&
       rootElement !== null &&
@@ -133,7 +135,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, isLinkEditMode, setIsLin
     }
 
     return true;
-  }, [editor, setIsLinkEditMode, isLinkEditMode, isLink, linkUrl]);
+  }, [editor, setIsLinkEditMode, isLinkEditMode]);
 
   useEffect(() => {
     const update = () => {
@@ -217,6 +219,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, isLinkEditMode, setIsLin
     if (lastSelection !== null) {
       if (linkUrl !== '') {
         editor.update(() => {
+          $setSelection(lastSelection.clone());
           editor.dispatchCommand(
             TOGGLE_LINK_COMMAND,
             sanitizeUrl(editedLinkUrl),

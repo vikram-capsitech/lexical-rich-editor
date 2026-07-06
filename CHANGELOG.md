@@ -2,6 +2,13 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.3.7] — 2026-07-06
+
+### Fixed
+- Editing an existing link's URL and confirming (✓ or Enter) silently did nothing: typing into the floating link editor's input moves DOM focus off the editor, which clears Lexical's internal selection, and `TOGGLE_LINK_COMMAND` is a no-op without one. The editor already tracked the selection at popover-open time (`lastSelection`) but never restored it before dispatching the command — it now does.
+- The link edit input could show a stale or blank URL instead of the link actually under the cursor, because it was populated from a React state variable one render behind the freshly-read node URL.
+- Clicking the toolbar's "Add Link" button (for brand-new links) didn't open the URL input: the button was missing the `onMouseDown` guard other floating-editor buttons use to keep focus on the editor, and this compounded with the floating editor resetting edit mode based on a link-detection flag from a different hook that hadn't caught up yet with the just-created link node.
+
 ## [1.3.6] — 2026-07-03
 
 ### Changed

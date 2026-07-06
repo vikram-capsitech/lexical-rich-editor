@@ -55,6 +55,7 @@ export const InsertLinkPlugin = ({
         opacity: disabled ? 0.55 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
       }}
+      onMouseDown={(event) => event.preventDefault()}
       onClick={insertLink}
     />
   );
