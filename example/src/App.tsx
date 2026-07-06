@@ -560,7 +560,7 @@ function MyEditor() {
                 fontFamily: "monospace",
               }}
             >
-              v1.3.7
+              v1.3.8
             </span>
           </div>
         </div>
@@ -589,7 +589,7 @@ function MyEditor() {
             <span aria-hidden="true">⚠️</span>
             <span style={{ flex: 1 }}>
               Versions <strong>1.0.0 – 1.2.1</strong> are deprecated. Please upgrade to{" "}
-              <strong>v1.3.7</strong> for the latest fixes and features. See the{" "}
+              <strong>v1.3.8</strong> for the latest fixes and features. See the{" "}
               <a
                 href="https://github.com/vikram-capsitech/lexical-rich-editor/blob/main/CHANGELOG.md"
                 target="_blank"
