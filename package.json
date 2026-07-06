@@ -1,6 +1,6 @@
 {
   "name": "@tarviks/lexical-rich-editor",
-  "version": "1.3.6",
+  "version": "1.3.7",
   "description": "A feature-rich Lexical-based rich text editor with autocomplete, spell check, tables, images, and more.",
   "keywords": [
     "lexical",
