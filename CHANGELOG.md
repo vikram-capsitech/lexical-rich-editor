@@ -2,6 +2,11 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.3.8] — 2026-07-06
+
+### Fixed
+- Clicking the URL text shown in the floating link editor's read-only popover didn't open the link — it looked like a normal `<a href target="_blank">`, but mousedown on it shifted focus/selection away from the editor, which triggered the popover's own reset logic and removed the anchor from the DOM before the browser's `click` event (and its native navigation) could fire. Added the same `onMouseDown` focus-preserving guard already used by the popover's Edit/Delete/Confirm/Cancel buttons, so a plain click on the URL now opens it in a new tab.
+
 ## [1.3.7] — 2026-07-06
 
 ### Fixed

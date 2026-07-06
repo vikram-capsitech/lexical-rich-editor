@@ -302,6 +302,7 @@ const FloatingLinkEditor = ({editor, isLink, setIsLink, isLinkEditMode, setIsLin
               href={sanitizeUrl(linkUrl)}
               target="_blank"
               rel="noopener noreferrer"
+              onMouseDown={preventDefault}
               style={{
                 padding: '0 8px',
                 overflow: 'hidden',
