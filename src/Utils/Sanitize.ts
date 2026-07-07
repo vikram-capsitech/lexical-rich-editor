@@ -119,6 +119,17 @@ const ALLOWED_ATTRS = new Set([
 const DANGEROUS_URL = /^\s*(javascript|data\s*:|vbscript)/i;
 
 /**
+ * `data:image/...;base64,` is the editor's own output for uploaded/pasted
+ * images (see ImagePlugin.tsx / InlineImage.tsx, which read files via
+ * `FileReader.readAsDataURL`) — round-tripping that content back through
+ * `value`/`setValue()` must not strip it. An <img> establishes an "image
+ * context": embedded SVG scripts don't execute there the way they would via
+ * <iframe>/<object>/inline <svg>, which this sanitizer already blocks or
+ * doesn't allow, so this is safe to allow only for `img[src]`.
+ */
+const SAFE_IMAGE_DATA_URL = /^\s*data:image\/[a-z0-9.+-]+;base64,/i;
+
+/**
  * Sanitizes a single DOM element in-place (recursive, bottom-up).
  *
  * Disallowed tags are "unwrapped" — their child nodes are promoted to the
@@ -171,7 +182,8 @@ function sanitizeElement(el: Element): void {
     }
 
     if (lname === 'href' || lname === 'src') {
-      if (DANGEROUS_URL.test(value)) {
+      const isSafeImageDataUrl = tag === 'img' && lname === 'src' && SAFE_IMAGE_DATA_URL.test(value);
+      if (DANGEROUS_URL.test(value) && !isSafeImageDataUrl) {
         el.removeAttribute(name);
       }
     }
