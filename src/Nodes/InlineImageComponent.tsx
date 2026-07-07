@@ -34,6 +34,10 @@ const useSuspenseImage = (src: string) => {
         imageCache.add(src);
         resolve(null);
       };
+      img.onerror = () => {
+        imageCache.add(src);
+        resolve(null);
+      };
     });
   }
 }
@@ -101,6 +105,7 @@ const InlineImageComponent = ({ src, altText, nodeKey, width, height, showCaptio
             }
           });
         }
+        return true;
       }
       return false;
     },
@@ -240,7 +245,15 @@ const InlineImageComponent = ({ src, altText, nodeKey, width, height, showCaptio
 
   return (
     <Suspense fallback={null}>
-      <span draggable={draggable} style={{ position: 'relative', display: 'inline-block' }}>
+      <span
+        draggable={draggable}
+        style={{ position: 'relative', display: 'inline-block' }}
+        // See ImageComponent.tsx: a host that renders through its own
+        // separate React root (Fluent's Modal/Layer) can cut native click
+        // propagation short at this decorator's own portal boundary, so
+        // CLICK_COMMAND never fires. Handle selection here too as a fallback.
+        onClick={(e) => onClick(e.nativeEvent)}
+      >
         <LazyImage
           className={
             isFocused

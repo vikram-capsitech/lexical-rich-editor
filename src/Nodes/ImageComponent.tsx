@@ -45,6 +45,7 @@ const useSuspenseImage = (src: string) => {
       };
       img.onerror = () => {
         imageCache.add(src);
+        resolve(null);
       };
     });
   }
@@ -126,6 +127,7 @@ const ImageComponent =({src,altText,nodeKey,width, height,maxWidth, resizable, s
             node.remove();
           }
         });
+        return true;
       }
       return false;
     },
@@ -330,6 +332,14 @@ const ImageComponent =({src,altText,nodeKey,width, height,maxWidth, resizable, s
       <div
         draggable={draggable}
         style={{ position: 'relative', display: 'inline-block' }}
+        // Belt-and-suspenders alongside the CLICK_COMMAND registration below:
+        // when this editor is mounted inside a host that renders through its
+        // own separate React root (e.g. Fluent's Modal/Layer), React stops
+        // native click propagation at this decorator's own portal boundary,
+        // so the click never reaches the editor root and CLICK_COMMAND never
+        // fires. Handling it here too — inside the same portal — selects the
+        // image regardless of whether that bubbling makes it out.
+        onClick={(e) => onClick(e.nativeEvent)}
       >
         {isLoadError ? (
           <BrokenImage />
