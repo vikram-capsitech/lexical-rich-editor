@@ -2,6 +2,20 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.3.9] — 2026-07-07
+
+### Fixed
+- Table cell action-menu dropdown (row/column insert/delete) rendered invisibly when the editor was embedded in a host that uses its own Fluent `Modal`/`Panel` — it portaled to `document.body` at `z-index: 9999`, well below that host chrome's `Layer` (`z-index: 1000000`). Now portals into the same floating-UI host the other floating surfaces already use, at the same `z-index` convention.
+- Clicking an image never selected it (no resize handles) when the editor was nested inside a host that renders through its own separate React root (e.g. a Modal) — React was cutting off native click propagation at the image decorator's own portal boundary before it could bubble to the editor root, where selection was handled. Now also handled via a JSX `onClick` inside the same portal.
+- Deleting a selected image corrupted the caret afterward: the delete handler removed the node but always returned `false` ("not handled"), so Lexical's default delete handling ran again on a selection that now pointed at an already-removed node, leaving the caret anchored on an unrelated ancestor element instead of the emptied paragraph.
+- An image that failed to load left its `Suspense` boundary suspended forever, rendering nothing at all — not even the existing broken-image fallback — because the thrown promise only ever resolved on `onload`, never `onerror`. Inline images additionally had no `onerror` handling at all.
+- Uploaded/pasted images (inserted with a `data:image/...;base64,` src) turned into broken images after the editor was re-mounted elsewhere (e.g. a consumer switching between an inline compose panel and a "Full Panel" view) — every `value`/`setValue()` round-trip ran through the HTML sanitizer, which stripped `data:` URIs unconditionally, including legitimate image data on `img[src]`. Now allowlisted specifically for that case; `data:`/`javascript:` on links and any non-image `data:` URI are still blocked.
+- Inline image "position: right" right-aligned any text already typed in the same paragraph as the image — positioning was implemented by calling `setFormat('right')` on the image's containing paragraph, which applies `text-align` to every child of that paragraph, not just the image. Replaced with real `float: left`/`float: right` CSS.
+- Inserting a table shaded both the first row and first column gray by default (Lexical's `includeHeaders: true` marks both as headers), with no way to opt out from the Insert Table dialog. Now only the first row is shaded, the standard doc/spreadsheet convention.
+
+### Changed
+- Removed ~100 lines of dead CSS in `ColorPickerComponent.css` left over from an earlier refactor to inline styles (only `.aoColorCallout` was still referenced) — shrinks the library's built CSS output from 16.64 KB to 14.73 KB.
+
 ## [1.3.8] — 2026-07-06
 
 ### Fixed
