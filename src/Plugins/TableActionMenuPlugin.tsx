@@ -150,6 +150,27 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
     );
   }, [editor, updateFromSelection]);
 
+  // anchorRect is a viewport-relative snapshot (getBoundingClientRect) taken
+  // once on selection change — without this, scrolling the page or the
+  // editor's own scroll container leaves the button anchored to that stale
+  // snapshot while the cell it's supposed to sit next to moves away underneath
+  // it, exactly like FloatLinkEditor/CharacterStylesPopupPlugin already guard
+  // against for their own floating surfaces.
+  React.useEffect(() => {
+    const root = editor.getRootElement();
+    const reposition = () => updateFromSelection();
+
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    root?.addEventListener('scroll', reposition, { passive: true });
+
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+      root?.removeEventListener('scroll', reposition);
+    };
+  }, [editor, updateFromSelection]);
+
   React.useEffect(() => {
     return editor.registerCommand<KeyboardEvent>(
       KEY_DOWN_COMMAND,
