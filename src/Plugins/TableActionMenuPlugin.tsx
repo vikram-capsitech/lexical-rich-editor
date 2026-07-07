@@ -24,6 +24,8 @@ import {
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 
+import { useFloatingPortalContainer } from '../Utils/FloatingPortal';
+
 import {
   Menu,
   MenuDivider,
@@ -50,6 +52,7 @@ import './TableActionMenu.css';
 
 export default function TableActionMenuPlugin({ disabled = false }: { disabled?: boolean }) {
   const [editor] = useLexicalComposerContext();
+  const portalContainer = useFloatingPortalContainer(editor);
 
   const [isInTable, setIsInTable] = React.useState(false);
   const [anchorRect, setAnchorRect] = React.useState<DOMRect | null>(null);
@@ -216,7 +219,10 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       position: 'fixed',
       top,
       left,
-      zIndex: 9999,
+      // Matches the other floating surfaces (see FloatingPortal.ts): must clear
+      // Fluent's Panel/Modal Layer host (z-index 1000000), otherwise this
+      // button renders behind the modal chrome in a full-page/Panel view.
+      zIndex: 10000010,
     };
   }, [anchorRect, contentRight]);
 
@@ -269,7 +275,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
   };
 
 
-  if (!canShow || !handleStyle) return null;
+  if (!canShow || !handleStyle || !portalContainer) return null;
 
   return createPortal(
     <div style={handleStyle} className='aoTableActionHandleRoot' data-lexical-editor-portal='true'>
@@ -349,6 +355,6 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
         </MenuPopover>
       </Menu>
     </div>,
-    document.body,
+    portalContainer,
   );
 }

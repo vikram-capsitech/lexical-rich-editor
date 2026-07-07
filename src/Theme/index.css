@@ -225,14 +225,17 @@ span.editor-image {
 }
 
 .inline-editor-image.position-full {
+  display: block;
   margin: 8px 0;
 }
 
 .inline-editor-image.position-left {
+  float: left;
   margin: 4px 8px 4px 0;
 }
 
 .inline-editor-image.position-right {
+  float: right;
   margin: 4px 0 4px 8px;
 }
 

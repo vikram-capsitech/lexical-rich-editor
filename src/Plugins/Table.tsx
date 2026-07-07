@@ -23,7 +23,10 @@ export const TableItemPlugin = ({ disabled }: { disabled: boolean }) => {
     if (!row || !col) return;
 
     editor.update(() => {
-      const tableNode = $createTableNodeWithDimensions(row, col, true);
+      // Shade only the first row as a header (standard doc/spreadsheet
+      // convention) — the first column was also being marked as a header,
+      // shading the entire left edge of every inserted table.
+      const tableNode = $createTableNodeWithDimensions(row, col, { columns: false, rows: true });
       $insertNodeToNearestRoot(tableNode);
     });
 

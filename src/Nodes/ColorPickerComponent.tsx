@@ -396,6 +396,7 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
             {/* Saturation / Value square */}
             <div
               ref={svRef}
+              data-testid='color-sv-box'
               onPointerDown={handleSVPointerDown}
               onPointerMove={handleSVPointerMove}
               style={{
@@ -441,6 +442,7 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
             {/* Hue slider */}
             <div
               ref={hueRef}
+              data-testid='color-hue-bar'
               onPointerDown={handleHuePointerDown}
               onPointerMove={handleHuePointerMove}
               style={{
@@ -484,6 +486,7 @@ export const ColorPickerControl = ({ value, title, disabled, onChange, icon, onO
                 }}
               />
               <TextField
+                data-testid='color-hex-input'
                 value={hexText}
                 onChange={handleHexChange}
                 onBlur={handleHexBlur}
