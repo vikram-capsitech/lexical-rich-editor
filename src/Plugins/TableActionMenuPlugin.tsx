@@ -50,12 +50,52 @@ import {
 
 import './TableActionMenu.css';
 
+// Walks up from the cell to find the nearest ancestor that actually clips
+// overflow (an `overflow: auto|scroll` container whose content overflows it),
+// e.g. the editor's own scrollable panel — distinct from the window viewport.
+function getScrollClipAncestor(el: HTMLElement): HTMLElement | null {
+  let node: HTMLElement | null = el.parentElement;
+  while (node) {
+    const style = getComputedStyle(node);
+    if (
+      (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+      node.scrollHeight > node.clientHeight
+    ) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
+// A cell that has scrolled above/below its scroll container (or off the
+// window viewport entirely) still returns a DOMRect from
+// getBoundingClientRect — it's just clipped out of view. Without this check
+// the button keeps tracking that rect and, once the clamp in handleStyle
+// pins it to the viewport edge, appears to hover on its own with nothing
+// beneath it instead of disappearing along with the table.
+function isRectVisible(rect: DOMRect, cellDom: HTMLElement): boolean {
+  if (rect.width === 0 && rect.height === 0) return false;
+  if (rect.bottom <= 0 || rect.top >= window.innerHeight) return false;
+  if (rect.right <= 0 || rect.left >= window.innerWidth) return false;
+
+  const clipAncestor = getScrollClipAncestor(cellDom);
+  if (clipAncestor) {
+    const containerRect = clipAncestor.getBoundingClientRect();
+    if (rect.bottom <= containerRect.top || rect.top >= containerRect.bottom) return false;
+    if (rect.right <= containerRect.left || rect.left >= containerRect.right) return false;
+  }
+
+  return true;
+}
+
 export default function TableActionMenuPlugin({ disabled = false }: { disabled?: boolean }) {
   const [editor] = useLexicalComposerContext();
   const portalContainer = useFloatingPortalContainer(editor);
 
   const [isInTable, setIsInTable] = React.useState(false);
   const [anchorRect, setAnchorRect] = React.useState<DOMRect | null>(null);
+  const [isAnchorVisible, setIsAnchorVisible] = React.useState(false);
   const [contentRight, setContentRight] = React.useState<number | null>(null);
   const [open, setOpen] = React.useState(false);
   const openRef = React.useRef(false);
@@ -85,8 +125,10 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
         if (tableNode) {
           const dom = editor.getElementByKey(tableNode.getKey());
           if (dom) {
+            const rect = dom.getBoundingClientRect();
             setIsInTable(true);
-            setAnchorRect(dom.getBoundingClientRect());
+            setAnchorRect(rect);
+            setIsAnchorVisible(isRectVisible(rect, dom as HTMLElement));
             setContentRight(null);
             return;
           }
@@ -96,6 +138,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       if (!$isRangeSelection(selection)) {
         setIsInTable(false);
         setAnchorRect(null);
+        setIsAnchorVisible(false);
         setContentRight(null);
         return;
       }
@@ -108,6 +151,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       if (!cellNode || !$isTableCellNode(cellNode)) {
         setIsInTable(false);
         setAnchorRect(null);
+        setIsAnchorVisible(false);
         setContentRight(null);
         return;
       }
@@ -116,12 +160,15 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       if (!cellDom) {
         setIsInTable(false);
         setAnchorRect(null);
+        setIsAnchorVisible(false);
         setContentRight(null);
         return;
       }
 
+      const cellRect = cellDom.getBoundingClientRect();
       setIsInTable(true);
-      setAnchorRect(cellDom.getBoundingClientRect());
+      setAnchorRect(cellRect);
+      setIsAnchorVisible(isRectVisible(cellRect, cellDom as HTMLElement));
       setContentRight(measureContentRight(cellDom as HTMLElement));
 
       if ($isRangeSelection(selection)) {
@@ -224,7 +271,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
   }, [editor, disabled]);
 
 
-  const canShow = isInTable && !!anchorRect && !disabled;
+  const canShow = isInTable && !!anchorRect && isAnchorVisible && !disabled;
 
   const handleStyle: React.CSSProperties | undefined = React.useMemo(() => {
     if (!anchorRect) return undefined;

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ContentEditorComponent, ContentEditorLevel } from 'lexical-rich-editor';
+import { useRef, useState } from 'react';
+import { ContentEditorComponent, ContentEditorLevel, ContentEditorRef } from 'lexical-rich-editor';
 
 /**
  * Reproduction harness for "typing text, then inserting a right-positioned
@@ -20,11 +20,27 @@ import { ContentEditorComponent, ContentEditorLevel } from 'lexical-rich-editor'
  */
 export default function InlineImagePositionHarness() {
   const [value, setValue] = useState('<p>Hello world this is my text</p>');
+  const editorRef = useRef<ContentEditorRef>(null);
 
   return (
     <div style={{ padding: 20 }}>
+      <button
+        type="button"
+        data-testid="simulate-view-change"
+        onClick={() => {
+          // Same getValue() -> setValue() round-trip a consumer performs when
+          // swapping ContentEditorComponent instances (e.g. compose <->
+          // full-panel view) — see ImageDataUrlRoundtripHarness for the sibling
+          // repro of a different bug this same round-trip exposed.
+          const html = editorRef.current?.getValue() ?? '';
+          editorRef.current?.setValue(html);
+        }}>
+        Simulate view change (getValue -&gt; setValue round-trip)
+      </button>
+
       <div style={{ height: 300, marginTop: 12 }}>
         <ContentEditorComponent
+          ref={editorRef}
           namespace="inline-image-position-harness"
           level={ContentEditorLevel.Pro}
           value={value}

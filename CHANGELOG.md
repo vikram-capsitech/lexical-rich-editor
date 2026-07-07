@@ -2,6 +2,12 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.3.11] — 2026-07-07
+
+### Fixed
+- Table cell action-menu dropdown stayed visible, pinned to the top of the viewport, after its cell scrolled out of view entirely — `handleStyle`'s `top: Math.max(8, ...)` clamp kept it on-screen instead of hiding it once the table it belonged to was no longer visible. Now hidden whenever the cell is clipped out of the window viewport or its nearest scrollable ancestor.
+- Inline image positioning (`Left`/`Right`/`Full`) was lost the moment the editor's content round-tripped through `getValue()`/`setValue()` (e.g. a consuming app's draft autosave) — the exact cycle a real integration hits on every save. Root cause was three compounding gaps in `InlineImageNode`: (1) position only existed as a CSS class dependent on the host importing `dist/index.css`, now also applied as direct inline `float`/`margin` styles; (2) `exportDOM()` emitted a bare `<img>` with no position info at all, now emits `data-position` plus the inline float styling; (3) both `InlineImageNode` and the block `ImageNode` register a DOM conversion for plain `<img>` tags, and the block node's unconditional higher priority meant any re-imported inline image actually became a plain block image, silently losing the whole floated-inline layout — fixed with a `data-lexical-inline-image` marker so the inline importer only outranks the block one for its own images. Also added `data-position`/`data-lexical-inline-image` to the HTML sanitizer's attribute allowlist, which was otherwise stripping both on every `setValue()` call.
+
 ## [1.3.10] — 2026-07-07
 
 ### Fixed

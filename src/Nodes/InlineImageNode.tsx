@@ -41,10 +41,26 @@ export interface UpdateInlineImagePayload {
   position?: Position;
 }
 
+// Both InlineImageNode and the block ImageNode register a DOM conversion for
+// bare `img` tags, and Lexical picks whichever registrant reports the higher
+// priority for a given element (see @lexical/html's getConversionFunction) —
+// ImageNode's is a static, unconditional `priority: 2`. Without an explicit
+// marker distinguishing "this img came from an InlineImageNode", any
+// exported inline image (getValue()/copy-paste) would always re-import as a
+// plain block image, silently losing its inline nature (and thus not just
+// the position value, but the entire floated-inline layout) on every
+// save/reload round-trip.
+const INLINE_IMAGE_MARKER_ATTR = 'data-lexical-inline-image';
+
 const $convertInlineImageElement = (domNode: Node): null | DOMConversionOutput => {
   if (isHTMLElement(domNode) && domNode.nodeName === 'IMG') {
     const {alt: altText, src, width, height} = domNode as HTMLImageElement;
-    const node = $createInlineImageNode({altText, height, src, width});
+    const positionAttr = domNode.getAttribute('data-position');
+    const position: Position =
+      positionAttr === 'left' || positionAttr === 'right' || positionAttr === 'full'
+        ? positionAttr
+        : undefined;
+    const node = $createInlineImageNode({altText, height, position, src, width});
     return {node};
   }
   return null;
@@ -118,10 +134,20 @@ export class InlineImageNode extends DecoratorNode<JSX.Element> {
 
   static importDOM(): DOMConversionMap | null {
     return {
-      img: (node: Node) => ({
-        conversion: $convertInlineImageElement,
-        priority: 0,
-      }),
+      img: (node: Node) => {
+        // Only outrank the block ImageNode's unconditional priority-2
+        // conversion (see the comment above $convertInlineImageElement) when
+        // this element actually came from an InlineImageNode; otherwise
+        // don't contribute a conversion at all so a plain pasted <img>
+        // still becomes a regular block image as before.
+        if (isHTMLElement(node) && node.hasAttribute(INLINE_IMAGE_MARKER_ATTR)) {
+          return {
+            conversion: $convertInlineImageElement,
+            priority: 3,
+          };
+        }
+        return null;
+      },
     };
   }
 
@@ -151,6 +177,19 @@ export class InlineImageNode extends DecoratorNode<JSX.Element> {
     element.setAttribute('alt', this.__altText);
     element.setAttribute('width', this.__width.toString());
     element.setAttribute('height', this.__height.toString());
+    // Always present, independent of __position, so importDOM can tell this
+    // <img> apart from a plain pasted one and re-create an InlineImageNode
+    // instead of letting it fall through to the block ImageNode's importer.
+    element.setAttribute(INLINE_IMAGE_MARKER_ATTR, 'true');
+    // Position must survive the HTML round-trip getValue()/setValue() do
+    // (this is the only representation those persist), so it's written as
+    // both a data attribute (exact, read back by $convertInlineImageElement)
+    // and real inline float/margin (so it still renders correctly if this
+    // HTML is ever displayed outside Lexical, e.g. a sent email body).
+    if (this.__position) {
+      element.setAttribute('data-position', this.__position);
+      InlineImageNode.applyPositionStyle(element, this.__position);
+    }
     return {element};
   }
 
@@ -223,12 +262,35 @@ export class InlineImageNode extends DecoratorNode<JSX.Element> {
 
   // View
 
+  // The position-left/right/full behavior is also defined in the package's
+  // CSS file as `.inline-editor-image.position-*` rules, but that file is a
+  // separate import (`@tarviks/lexical-rich-editor/dist/index.css`) a
+  // consuming app can forget to include. Applying it as inline styles here
+  // too means positioning still works even when that stylesheet isn't
+  // loaded, instead of silently no-op'ing back to normal block flow.
+  static applyPositionStyle(span: HTMLElement, position: Position): void {
+    span.style.removeProperty('float');
+    span.style.removeProperty('display');
+    span.style.removeProperty('margin');
+    if (position === 'left') {
+      span.style.float = 'left';
+      span.style.margin = '4px 8px 4px 0';
+    } else if (position === 'right') {
+      span.style.float = 'right';
+      span.style.margin = '4px 0 4px 8px';
+    } else if (position === 'full') {
+      span.style.display = 'block';
+      span.style.margin = '8px 0';
+    }
+  }
+
   createDOM(config: EditorConfig): HTMLElement {
     const span = document.createElement('span');
     const className = `${config.theme.inlineImage} position-${this.__position}`;
     if (className !== undefined) {
       span.className = className;
     }
+    InlineImageNode.applyPositionStyle(span, this.__position);
     return span;
   }
 
@@ -239,6 +301,7 @@ export class InlineImageNode extends DecoratorNode<JSX.Element> {
       if (className !== undefined) {
         dom.className = className;
       }
+      InlineImageNode.applyPositionStyle(dom, position);
     }
     return false;
   }
