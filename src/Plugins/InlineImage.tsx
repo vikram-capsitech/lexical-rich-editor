@@ -278,14 +278,6 @@ export const InlineImagePlugin = () => {
           if ($isRootOrShadowRoot(imageNode.getParentOrThrow())) {
             $wrapNodeInElement(imageNode, $createParagraphNode).selectEnd();
           }
-          // Apply text alignment to the paragraph so toolbar alignment works
-          const parent = imageNode.getParent();
-          if (parent && typeof (parent as any).setFormat === 'function') {
-            const fmt = payload.position === 'right' ? 'right'
-              : payload.position === 'full' ? 'center'
-              : 'left';
-            (parent as any).setFormat(fmt);
-          }
           return true;
         },
         COMMAND_PRIORITY_EDITOR
