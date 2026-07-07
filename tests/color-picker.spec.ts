@@ -4,30 +4,20 @@ import { test, expect, Page } from '@playwright/test';
  * Covers the text-color / background-color picker flow against the
  * ContentEditorComponent test harness (example/src/ColorPickerTestHarness.tsx).
  *
- * Root cause under test: the picker used to continuously re-sync its local
- * color from the host's `value` prop while its popover was open, so a
- * stale/incorrect echo from the host's selection-readback round trip could
- * overwrite an in-progress pick the instant the mouse was released or the
- * popover was reopened. Fixed in src/Nodes/ColorPickerComponent.tsx by only
- * seeding from `value` on the closed -> open transition.
+ * Architecture under test: every interaction (preset click, hex edit,
+ * SV-box click/drag, hue-bar click/drag) commits straight through `onChange`
+ * as it happens (live commit) — there is no separate "Apply" step, so these
+ * tests assert the applied color directly after the triggering interaction.
+ * The picker is closed by toggling its trigger button (it also has its own
+ * "Close" button, not exercised by the flows here).
  *
- * The picker commits every preset click, hex edit, and SV/hue drag straight
- * through `onChange` as it happens (live commit) — there is no separate
- * "Apply" step to wait on, so these tests assert the applied color directly
- * after the triggering interaction. The picker is closed by toggling its
- * trigger button (no "Close" button in the flow being tested).
- * Architecture under test: picking a color (clicking the saturation/value
- * box, the hue bar, a preset swatch, or editing the hex field) only updates
- * the picker's local draft state — nothing is applied to the editor until
- * the user explicitly clicks Apply. This replaced an earlier design that
- * applied color continuously while dragging, which depended on Lexical
- * syncing DOM selection/focus on every single pointer move; in at least one
- * production environment that fought the popover for focus badly enough
- * that a drag's mouseup was sometimes never delivered to `window`, leaving
- * the drag "stuck" and silently overwriting the document with whatever
- * color a later, unrelated stray cursor movement happened to compute.
- * Committing once, deliberately, on Apply makes that whole failure class
- * structurally impossible: the editor is never touched by pointer movement.
+ * Root cause under test (closing/reopening flow): the picker used to
+ * continuously re-sync its local color from the host's `value` prop while
+ * its popover was open, so a stale/incorrect echo from the host's
+ * selection-readback round trip could overwrite an in-progress pick the
+ * instant the mouse was released or the popover was reopened. Fixed in
+ * src/Nodes/ColorPickerComponent.tsx by only seeding from `value` on the
+ * closed -> open transition.
  */
 
 function hexToRgbString(hex: string): string {
@@ -80,11 +70,15 @@ async function closePicker(page: Page, title: 'Text color' | 'Background color')
 }
 
 async function pickPreset(page: Page, hex: string) {
-  await page.locator(`.aoLexSwatches button[title="${hex}"]`).click();
+  await page.locator(`.aoColorCallout button[title="${hex}"]`).click();
+}
+
+function hexInputLocator(page: Page) {
+  return page.getByTestId('color-hex-input');
 }
 
 async function setCustomHex(page: Page, hex: string) {
-  const input = page.locator('.aoLexRow:has-text("Hex") input');
+  const input = hexInputLocator(page);
   await input.fill(hex);
   await input.blur();
 }
@@ -158,14 +152,15 @@ test.describe('Color picker — text & background color', () => {
     await expectComputedStyle(page, 'AAAA', 'backgroundColor', hexToRgbString('#654321'));
   });
 
-  test('picking a color does not touch the editor until Apply is clicked', async ({ page }) => {
+  test('opening the picker without picking a color leaves existing formatting untouched', async ({ page }) => {
     await gotoHarness(page);
     await selectAllEditorText(page);
+    const before = await computedStyleOfText(page, 'AAAA', 'color');
+
     await openPicker(page, 'Text color');
-    await pickPreset(page, '#0000ff');
     await closePicker(page, 'Text color');
 
-    expect(await computedStyleOfText(page, 'AAAA', 'color')).not.toBe(hexToRgbString('#ff0000'));
+    expect(await computedStyleOfText(page, 'AAAA', 'color')).toBe(before);
   });
 
   test('reflects the actually-applied color after closing and reopening the picker', async ({ page }) => {
@@ -173,11 +168,10 @@ test.describe('Color picker — text & background color', () => {
     await selectAllEditorText(page);
     await openPicker(page, 'Text color');
     await pickPreset(page, '#0000ff');
-    await clickApply(page);
+    await closePicker(page, 'Text color');
 
     await openPicker(page, 'Text color');
-    const hexInput = page.locator('.aoLexRow:has-text("Hex") input');
-    await expect(hexInput).toHaveValue('#0000ff');
+    await expect(hexInputLocator(page)).toHaveValue('#0000ff');
   });
 
   test('color formatting survives a parent re-render', async ({ page }) => {
@@ -226,7 +220,7 @@ test.describe('Color picker — text & background color', () => {
     expect(await computedStyleOfText(page, 'BBBB', 'color')).not.toBe(hexToRgbString('#ff0000'));
   });
 
-  test('clicking inside the saturation/value box picks a color and applies it on Apply', async ({ page }) => {
+  test('clicking inside the saturation/value box picks a color and applies it live', async ({ page }) => {
     await gotoHarness(page);
     await selectAllEditorText(page);
     await openPicker(page, 'Text color');
@@ -238,34 +232,26 @@ test.describe('Color picker — text & background color', () => {
     // Click a non-corner point so the result is unambiguous (not a default).
     await sv.click({ position: { x: box.width * 0.25, y: box.height * 0.25 } });
 
-    const hexInput = page.locator('.aoLexRow:has-text("Hex") input');
-    const pickedHex = await hexInput.inputValue();
+    const pickedHex = await hexInputLocator(page).inputValue();
     expect(pickedHex.toLowerCase()).not.toBe('#ffffff');
     expect(pickedHex.toLowerCase()).not.toBe('#000000');
 
-    // Not applied yet — picking is local-only until Apply.
-    expect(await computedStyleOfText(page, 'AAAA', 'color')).not.toBe(hexToRgbString(pickedHex));
-
-    await clickApply(page);
-    expect((await computedStyleOfText(page, 'AAAA', 'color'))?.toLowerCase()).toBe(
-      hexToRgbString(pickedHex),
-    );
+    await expectComputedStyle(page, 'AAAA', 'color', hexToRgbString(pickedHex));
   });
 
-  test('clicking the hue bar picks a color and applies it on Apply', async ({ page }) => {
+  test('clicking the hue bar picks a color and applies it live', async ({ page }) => {
     await gotoHarness(page);
     await selectAllEditorText(page);
     await openPicker(page, 'Text color');
 
-    const hue = page.locator('.aoLexHue');
+    const hue = page.getByTestId('color-hue-bar');
     const box = await hue.boundingBox();
     if (!box) throw new Error('Hue bar not visible');
 
     await hue.click({ position: { x: box.width * 0.5, y: box.height / 2 } });
 
-    const hexInput = page.locator('.aoLexRow:has-text("Hex") input');
-    const pickedHex = await hexInput.inputValue();
+    const pickedHex = await hexInputLocator(page).inputValue();
 
-    await expectComputedStyle(page, 'AAAA', 'color', hexToRgbString(draggedHex));
+    await expectComputedStyle(page, 'AAAA', 'color', hexToRgbString(pickedHex));
   });
 });
