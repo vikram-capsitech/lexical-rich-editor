@@ -229,12 +229,34 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
   const handleStyle: React.CSSProperties | undefined = React.useMemo(() => {
     if (!anchorRect) return undefined;
 
-    const top = Math.max(8, anchorRect.top + 6);
-    const clampedCellRight = Math.min(anchorRect.right, window.innerWidth - 8);
+    const BUTTON_SIZE = 28;
+    const PAD = 8;
+
+    // Clamp to the editor's own visible (scroll-clipped) bounds, not just
+    // the browser viewport. The button is a position:fixed portal outside
+    // the editor's own overflow:auto container, so it isn't clipped the way
+    // the table itself is — with a large table, scrolling the editor's
+    // content (or the page) can carry the selected cell above/below/beside
+    // the editor's own edges while it stays "selected", and a viewport-only
+    // clamp then floats the button into the surrounding page chrome instead
+    // of keeping it pinned to the content area the table actually lives in.
+    const editorRect = editor.getRootElement()?.getBoundingClientRect();
+    const minTop = editorRect ? editorRect.top + PAD : PAD;
+    const maxTop = editorRect
+      ? Math.max(minTop, editorRect.bottom - BUTTON_SIZE - PAD)
+      : window.innerHeight - BUTTON_SIZE - PAD;
+    const minLeft = editorRect ? editorRect.left + PAD : PAD;
+    const maxLeft = editorRect
+      ? Math.max(minLeft, editorRect.right - BUTTON_SIZE - PAD)
+      : window.innerWidth - BUTTON_SIZE - PAD;
+
+    const top = Math.min(Math.max(anchorRect.top + 6, minTop), maxTop);
+    const clampedCellRight = Math.min(anchorRect.right, maxLeft + BUTTON_SIZE);
     // Place button right beside the content; fall back to near left edge when cell is empty
-    const left = contentRight !== null
+    const rawLeft = contentRight !== null
       ? Math.max(anchorRect.left + 4, Math.min(contentRight + 4, clampedCellRight - 32))
-      : Math.max(8, anchorRect.left + 8);
+      : anchorRect.left + 8;
+    const left = Math.min(Math.max(rawLeft, minLeft), maxLeft);
 
     return {
       position: 'fixed',
@@ -245,7 +267,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       // button renders behind the modal chrome in a full-page/Panel view.
       zIndex: 10000010,
     };
-  }, [anchorRect, contentRight]);
+  }, [anchorRect, contentRight, editor]);
 
   const dangerStyle: React.CSSProperties = {
     color: 'var(--colorPaletteRedForeground1)',
