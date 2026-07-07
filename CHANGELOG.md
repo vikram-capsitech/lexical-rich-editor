@@ -2,6 +2,11 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.3.10] — 2026-07-07
+
+### Fixed
+- Table cell action-menu dropdown drifted away from its cell when the page (or the editor's own scroll container) was scrolled after clicking into a cell. The button portals to `document.body` with `position: fixed`, positioned from a `getBoundingClientRect()` snapshot taken once whenever the selection changes — unlike `FloatLinkEditor`/`CharacterStylesPopupPlugin`, which both already reposition on `scroll`/`resize`, this plugin never recomputed that snapshot on those events. Added the same listeners the other floating surfaces use.
+
 ## [1.3.9] — 2026-07-07
 
 ### Fixed
