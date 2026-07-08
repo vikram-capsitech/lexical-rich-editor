@@ -2,6 +2,15 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.3.12] — 2026-07-07
+
+### Fixed
+- Table cell action-menu dropdown could still render dangling with no table visibly beneath it when its cell was only *partially* clipped by a scroll container's edge (e.g. a row half cut off at the bottom of a fixed-height compose panel) — the 1.3.11 fix only hid the button when the cell was clipped entirely out of view, and a "just barely overlapping" cell still passed that check even though the button (which anchors near the cell's top edge) no longer had room to render within the visible area. Now hidden whenever the button's own footprint, not just any pixel of the cell, would exceed the visible bounds.
+- Font-family, font-size, text color, and background color applied via the toolbar were silently lost the moment the editor's content round-tripped through `getValue()`/`setValue()` — the same class of bug as the inline-image-position round-trip fixed in 1.3.11, and the same real-world trigger (a consuming app's view-switch/autosave). Root cause: Lexical's own default HTML importer for `<span>` only derives format flags (bold/italic/underline/etc.) from a style attribute — it never restores arbitrary CSS text like `font-family`/`font-size`/`color`/`background-color` onto the TextNode's own style. These survived fine in a live session (the in-memory editor state never lost them) but vanished on any HTML reimport, which no existing test had exercised for these properties. Fixed with a custom `html.import` override for `span` (`src/Utils/PreserveTextStyleOnImport.ts`) that restores all four in addition to Lexical's existing format-flag detection.
+
+### Changed
+- The example playground's displayed version number (navbar badge + deprecation notice) is now read from the root `package.json` at build time (via a Vite `define`) instead of being a hand-edited string in `App.tsx`, so it can no longer drift out of sync with the actually-published npm version.
+
 ## [1.3.11] — 2026-07-07
 
 ### Fixed

@@ -68,23 +68,36 @@ function getScrollClipAncestor(el: HTMLElement): HTMLElement | null {
   return null;
 }
 
+// The button anchors just below the cell's top edge (`anchorRect.top + 6`,
+// see handleStyle) and needs roughly this much room below that point to
+// render itself without being clipped.
+const BUTTON_VERTICAL_FOOTPRINT = 34;
+
 // A cell that has scrolled above/below its scroll container (or off the
 // window viewport entirely) still returns a DOMRect from
-// getBoundingClientRect — it's just clipped out of view. Without this check
-// the button keeps tracking that rect and, once the clamp in handleStyle
-// pins it to the viewport edge, appears to hover on its own with nothing
-// beneath it instead of disappearing along with the table.
+// getBoundingClientRect — it's just clipped out of view. A cell that's only
+// barely peeking into view is just as much of a problem: there's a hard
+// binary "fully in vs fully out" check, but the button anchors near the
+// cell's TOP edge, so a row that's mostly scrolled past (its top edge and
+// the button's own footprint no longer fit in the visible area) would still
+// pass a loose "any overlap" test — the button ends up rendered dangling at
+// the clipped boundary with no table visibly beneath it. Requiring the
+// button's actual footprint to fit within the visible area (not just "some
+// pixel of the cell is visible") catches that case too.
 function isRectVisible(rect: DOMRect, cellDom: HTMLElement): boolean {
   if (rect.width === 0 && rect.height === 0) return false;
-  if (rect.bottom <= 0 || rect.top >= window.innerHeight) return false;
-  if (rect.right <= 0 || rect.left >= window.innerWidth) return false;
 
   const clipAncestor = getScrollClipAncestor(cellDom);
-  if (clipAncestor) {
-    const containerRect = clipAncestor.getBoundingClientRect();
-    if (rect.bottom <= containerRect.top || rect.top >= containerRect.bottom) return false;
-    if (rect.right <= containerRect.left || rect.left >= containerRect.right) return false;
-  }
+  const containerRect = clipAncestor?.getBoundingClientRect();
+
+  const visibleTop = containerRect ? Math.max(0, containerRect.top) : 0;
+  const visibleBottom = containerRect ? Math.min(window.innerHeight, containerRect.bottom) : window.innerHeight;
+  const visibleLeft = containerRect ? Math.max(0, containerRect.left) : 0;
+  const visibleRight = containerRect ? Math.min(window.innerWidth, containerRect.right) : window.innerWidth;
+
+  if (rect.top < visibleTop) return false;
+  if (rect.top + BUTTON_VERTICAL_FOOTPRINT > visibleBottom) return false;
+  if (rect.left >= visibleRight || rect.right <= visibleLeft) return false;
 
   return true;
 }
