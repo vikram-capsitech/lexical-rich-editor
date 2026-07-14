@@ -47,3 +47,46 @@ test('the table action-menu button tracks its cell across a page scroll', async 
     expect(buttonBox!.y - cellBox!.y).toBeLessThan(20);
   }).toPass({ timeout: 5000 });
 });
+
+/**
+ * Root cause under test: the button is a position: fixed portal outside the
+ * editor's own overflow:auto container, so it isn't clipped the way the
+ * table itself is. With a large table, scrolling the editor's own content
+ * (not the page) can carry the selected cell above/below the editor's own
+ * edges while it stays selected. An earlier fix clamped the button's
+ * position against the editor's own getBoundingClientRect() so it couldn't
+ * float outside the editor into the surrounding page chrome — but that kept
+ * the button visible, pinned to the editor's edge, even once the cell was
+ * fully scrolled out of view, which just moved the "floats over unrelated
+ * content" problem from the page chrome to the editor's own edge. Now the
+ * button hides entirely once its cell has no overlap left with the editor's
+ * visible area, and reappears once scrolling brings the cell back into view.
+ */
+test('the table action-menu button hides once its cell scrolls fully out of view, and reappears when scrolled back', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('[contenteditable="true"]').first().waitFor();
+
+  await page.getByTitle('Add table').click();
+  await page.getByPlaceholder('Rows').fill('20');
+  await page.getByPlaceholder('Columns').fill('5');
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+
+  const editor = page.locator('[contenteditable="true"]').first();
+
+  const firstCell = page.locator('table td, table th').first();
+  await firstCell.click();
+
+  const button = page.locator('.aoTableActionHandleBtn');
+  await expect(button).toBeVisible();
+
+  // Scroll the editor's own scroll container (not the page) past the
+  // selected cell, without reselecting — the cursor stays in that cell.
+  await editor.evaluate((el) => { el.scrollTop = el.scrollHeight; });
+
+  await expect(button).toBeHidden({ timeout: 5000 });
+
+  // Scroll back to the top so the cell is visible again.
+  await editor.evaluate((el) => { el.scrollTop = 0; });
+
+  await expect(button).toBeVisible({ timeout: 5000 });
+});

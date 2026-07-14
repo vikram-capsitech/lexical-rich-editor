@@ -788,7 +788,11 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
               )}
 
               {!isReadOnly && props.showFloatingToolbar && <CharacterStylesPopupPlugin />}
-              <CustomOnChangePlugin value={props.value} onChange={props.onChange} />
+              <CustomOnChangePlugin
+                value={props.value}
+                onChange={props.onChange}
+                isReadOnly={isReadOnly}
+              />
 
               {(props.wordLimit !== undefined ||
                 props.required ||

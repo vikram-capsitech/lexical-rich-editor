@@ -289,12 +289,56 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
   const handleStyle: React.CSSProperties | undefined = React.useMemo(() => {
     if (!anchorRect) return undefined;
 
-    const top = Math.max(8, anchorRect.top + 6);
-    const clampedCellRight = Math.min(anchorRect.right, window.innerWidth - 8);
+    const BUTTON_SIZE = 28;
+    const PAD = 8;
+
+    const editorRect = editor.getRootElement()?.getBoundingClientRect();
+
+    // Hide entirely once the selected cell has scrolled out of the editor's
+    // own visible (clipped) area and/or off the browser viewport. The button
+    // is a position:fixed portal outside the editor's own overflow:auto
+    // container, so it isn't clipped the way the table itself is — without
+    // this check, a cell that scrolls fully out of view would still show the
+    // button pinned to the editor's edge, floating disconnected over
+    // whatever content is actually visible there instead of the table it
+    // belongs to.
+    const clipRect = editorRect
+      ? {
+          top: Math.max(editorRect.top, 0),
+          left: Math.max(editorRect.left, 0),
+          right: Math.min(editorRect.right, window.innerWidth),
+          bottom: Math.min(editorRect.bottom, window.innerHeight),
+        }
+      : { top: 0, left: 0, right: window.innerWidth, bottom: window.innerHeight };
+
+    const isCellVisible =
+      anchorRect.bottom > clipRect.top &&
+      anchorRect.top < clipRect.bottom &&
+      anchorRect.right > clipRect.left &&
+      anchorRect.left < clipRect.right;
+
+    if (!isCellVisible) return undefined;
+
+    // Clamp to the editor's own visible (scroll-clipped) bounds, not just the
+    // browser viewport, for cells that are only partially scrolled out — so
+    // the button stays pinned to the content area the table actually lives
+    // in rather than floating into the surrounding page chrome.
+    const minTop = editorRect ? editorRect.top + PAD : PAD;
+    const maxTop = editorRect
+      ? Math.max(minTop, editorRect.bottom - BUTTON_SIZE - PAD)
+      : window.innerHeight - BUTTON_SIZE - PAD;
+    const minLeft = editorRect ? editorRect.left + PAD : PAD;
+    const maxLeft = editorRect
+      ? Math.max(minLeft, editorRect.right - BUTTON_SIZE - PAD)
+      : window.innerWidth - BUTTON_SIZE - PAD;
+
+    const top = Math.min(Math.max(anchorRect.top + 6, minTop), maxTop);
+    const clampedCellRight = Math.min(anchorRect.right, maxLeft + BUTTON_SIZE);
     // Place button right beside the content; fall back to near left edge when cell is empty
-    const left = contentRight !== null
+    const rawLeft = contentRight !== null
       ? Math.max(anchorRect.left + 4, Math.min(contentRight + 4, clampedCellRight - 32))
-      : Math.max(8, anchorRect.left + 8);
+      : anchorRect.left + 8;
+    const left = Math.min(Math.max(rawLeft, minLeft), maxLeft);
 
     return {
       position: 'fixed',
@@ -305,7 +349,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       // button renders behind the modal chrome in a full-page/Panel view.
       zIndex: 10000010,
     };
-  }, [anchorRect, contentRight]);
+  }, [anchorRect, contentRight, editor]);
 
   const dangerStyle: React.CSSProperties = {
     color: 'var(--colorPaletteRedForeground1)',
