@@ -46,7 +46,7 @@
     "dev": "cd example && yarn dev",
     "lint": "tsc --noEmit",
     "test:e2e": "playwright test",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
     "@fluentui/react": ">=8.0.0",
