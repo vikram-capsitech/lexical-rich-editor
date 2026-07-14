@@ -63,6 +63,7 @@ const LazyImage = ({ altText, className, imageRef, src, width, height, position 
       data-position={position}
       style={{
         display: 'block',
+        maxWidth: '100%',
         height,
         width,
       }}

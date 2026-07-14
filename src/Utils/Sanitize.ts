@@ -110,6 +110,8 @@ const ALLOWED_ATTRS = new Set([
   'data-lex-block',
   'data-kind',
   'data-lexical-decorator',
+  'data-lexical-inline-image',
+  'data-position',
   // Misc
   'title',
   'allowfullscreen',

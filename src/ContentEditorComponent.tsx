@@ -42,6 +42,7 @@ import { InlineImageNode } from './Nodes/InlineImageNode';
 import { PageBreakNode } from './Nodes/PageBreakNode';
 import { SpellErrorNode } from './Nodes/SpellErrorNode';
 import { YouTubeNode } from './Nodes/YoutubeNode';
+import { preserveTextStyleImportMap } from './Utils/PreserveTextStyleOnImport';
 
 import AutocompletePlugin from './Plugins/AutoComplete';
 import CharacterStylesPopupPlugin from './Plugins/CharacterStylesPopupPlugin';
@@ -411,6 +412,9 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
 
           HtmlBlockNode,
         ],
+        html: {
+          import: preserveTextStyleImportMap,
+        },
       };
       props.onBeforeInitialize?.(config);
       return config;

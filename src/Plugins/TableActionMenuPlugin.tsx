@@ -50,12 +50,65 @@ import {
 
 import './TableActionMenu.css';
 
+// Walks up from the cell to find the nearest ancestor that actually clips
+// overflow (an `overflow: auto|scroll` container whose content overflows it),
+// e.g. the editor's own scrollable panel — distinct from the window viewport.
+function getScrollClipAncestor(el: HTMLElement): HTMLElement | null {
+  let node: HTMLElement | null = el.parentElement;
+  while (node) {
+    const style = getComputedStyle(node);
+    if (
+      (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+      node.scrollHeight > node.clientHeight
+    ) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
+// The button anchors just below the cell's top edge (`anchorRect.top + 6`,
+// see handleStyle) and needs roughly this much room below that point to
+// render itself without being clipped.
+const BUTTON_VERTICAL_FOOTPRINT = 34;
+
+// A cell that has scrolled above/below its scroll container (or off the
+// window viewport entirely) still returns a DOMRect from
+// getBoundingClientRect — it's just clipped out of view. A cell that's only
+// barely peeking into view is just as much of a problem: there's a hard
+// binary "fully in vs fully out" check, but the button anchors near the
+// cell's TOP edge, so a row that's mostly scrolled past (its top edge and
+// the button's own footprint no longer fit in the visible area) would still
+// pass a loose "any overlap" test — the button ends up rendered dangling at
+// the clipped boundary with no table visibly beneath it. Requiring the
+// button's actual footprint to fit within the visible area (not just "some
+// pixel of the cell is visible") catches that case too.
+function isRectVisible(rect: DOMRect, cellDom: HTMLElement): boolean {
+  if (rect.width === 0 && rect.height === 0) return false;
+
+  const clipAncestor = getScrollClipAncestor(cellDom);
+  const containerRect = clipAncestor?.getBoundingClientRect();
+
+  const visibleTop = containerRect ? Math.max(0, containerRect.top) : 0;
+  const visibleBottom = containerRect ? Math.min(window.innerHeight, containerRect.bottom) : window.innerHeight;
+  const visibleLeft = containerRect ? Math.max(0, containerRect.left) : 0;
+  const visibleRight = containerRect ? Math.min(window.innerWidth, containerRect.right) : window.innerWidth;
+
+  if (rect.top < visibleTop) return false;
+  if (rect.top + BUTTON_VERTICAL_FOOTPRINT > visibleBottom) return false;
+  if (rect.left >= visibleRight || rect.right <= visibleLeft) return false;
+
+  return true;
+}
+
 export default function TableActionMenuPlugin({ disabled = false }: { disabled?: boolean }) {
   const [editor] = useLexicalComposerContext();
   const portalContainer = useFloatingPortalContainer(editor);
 
   const [isInTable, setIsInTable] = React.useState(false);
   const [anchorRect, setAnchorRect] = React.useState<DOMRect | null>(null);
+  const [isAnchorVisible, setIsAnchorVisible] = React.useState(false);
   const [contentRight, setContentRight] = React.useState<number | null>(null);
   const [open, setOpen] = React.useState(false);
   const openRef = React.useRef(false);
@@ -85,8 +138,10 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
         if (tableNode) {
           const dom = editor.getElementByKey(tableNode.getKey());
           if (dom) {
+            const rect = dom.getBoundingClientRect();
             setIsInTable(true);
-            setAnchorRect(dom.getBoundingClientRect());
+            setAnchorRect(rect);
+            setIsAnchorVisible(isRectVisible(rect, dom as HTMLElement));
             setContentRight(null);
             return;
           }
@@ -96,6 +151,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       if (!$isRangeSelection(selection)) {
         setIsInTable(false);
         setAnchorRect(null);
+        setIsAnchorVisible(false);
         setContentRight(null);
         return;
       }
@@ -108,6 +164,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       if (!cellNode || !$isTableCellNode(cellNode)) {
         setIsInTable(false);
         setAnchorRect(null);
+        setIsAnchorVisible(false);
         setContentRight(null);
         return;
       }
@@ -116,12 +173,15 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
       if (!cellDom) {
         setIsInTable(false);
         setAnchorRect(null);
+        setIsAnchorVisible(false);
         setContentRight(null);
         return;
       }
 
+      const cellRect = cellDom.getBoundingClientRect();
       setIsInTable(true);
-      setAnchorRect(cellDom.getBoundingClientRect());
+      setAnchorRect(cellRect);
+      setIsAnchorVisible(isRectVisible(cellRect, cellDom as HTMLElement));
       setContentRight(measureContentRight(cellDom as HTMLElement));
 
       if ($isRangeSelection(selection)) {
@@ -224,7 +284,7 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
   }, [editor, disabled]);
 
 
-  const canShow = isInTable && !!anchorRect && !disabled;
+  const canShow = isInTable && !!anchorRect && isAnchorVisible && !disabled;
 
   const handleStyle: React.CSSProperties | undefined = React.useMemo(() => {
     if (!anchorRect) return undefined;
