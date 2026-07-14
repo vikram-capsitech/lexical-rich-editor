@@ -8,6 +8,7 @@ import { normalizeToBlockHtml, postProcessOutput, sanitizeHtml } from '../Utils/
 interface ICustomOnChangePluginProps {
   value: string;
   onChange: (value: string) => void;
+  isReadOnly?: boolean;
 }
 
 /**
@@ -64,14 +65,27 @@ export function splitHeadingsAtBrSequences(html: string): string {
   return doc.body.innerHTML;
 }
 
-export const CustomOnChangePlugin = ({ value, onChange }: ICustomOnChangePluginProps) => {
+export const CustomOnChangePlugin = ({ value, onChange, isReadOnly }: ICustomOnChangePluginProps) => {
   const [editor] = useLexicalComposerContext();
   const initializedRef = useRef(false);
+  // Tracks the last `value` string this instance imported (either from the
+  // prop or from its own onChange echo), so read-only viewers can re-sync
+  // to external updates without re-importing their own unchanged output.
+  const lastImportedValueRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!value || initializedRef.current) return;
+    if (!value) return;
+    // Editable instances import once: the editor itself is the source of
+    // truth for `value`, so re-importing on every prop change would blow
+    // away the user's live cursor/selection while typing.
+    // Read-only instances (e.g. a "full view" panel fed by shared state)
+    // have no cursor to protect and are never the source of `value`, so
+    // they should keep syncing to external updates for their whole lifetime.
+    if (!isReadOnly && initializedRef.current) return;
+    if (value === lastImportedValueRef.current) return;
 
     initializedRef.current = true;
+    lastImportedValueRef.current = value;
 
     editor.update(() => {
       const root = $getRoot();
@@ -86,16 +100,33 @@ export const CustomOnChangePlugin = ({ value, onChange }: ICustomOnChangePluginP
 
       root.append(...nodes);
     });
-  }, [editor, value]);
+  }, [editor, value, isReadOnly]);
 
   return (
     <OnChangePlugin
+      // Without this, OnChangePlugin fires on every selection-only change
+      // (cursor moves, Shift+Arrow extending a selection, clicking around) —
+      // not just actual edits — because its default `ignoreSelectionChange`
+      // is `false`. Each firing re-serializes the *entire* document via
+      // $generateHtmlFromNodes plus two DOMParser passes below, then calls
+      // the consumer's onChange (typically a setState causing a full
+      // re-render). That heavy synchronous work running on every keystroke —
+      // including plain arrow-key navigation — is enough to make rapid
+      // keyboard input (e.g. holding Shift+Arrow, or typing quickly) feel
+      // janky or drop/delay key handling. Only actual content edits
+      // (dirty elements/leaves) need to produce new HTML.
+      ignoreSelectionChange
       onChange={(editorState) => {
         editorState.read(() => {
           // Post-process: ensure any LineBreakNode-based paragraph separators
           // inside headings are split into proper block elements in the output.
           const raw = $generateHtmlFromNodes(editor);
-          onChange(postProcessOutput(splitHeadingsAtBrSequences(raw)));
+          const html = postProcessOutput(splitHeadingsAtBrSequences(raw));
+          // Record our own output as "already imported" so a read-only
+          // instance doesn't re-clear+re-import itself when the caller
+          // feeds this exact string back in as `value`.
+          lastImportedValueRef.current = html;
+          onChange(html);
         });
       }}
     />

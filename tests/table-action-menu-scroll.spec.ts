@@ -53,14 +53,16 @@ test('the table action-menu button tracks its cell across a page scroll', async 
  * editor's own overflow:auto container, so it isn't clipped the way the
  * table itself is. With a large table, scrolling the editor's own content
  * (not the page) can carry the selected cell above/below the editor's own
- * edges while it stays selected — the previous fix only recomputed the
- * button's position on scroll, clamping it against the browser viewport, so
- * the button ended up floating into the surrounding page chrome (e.g. above
- * the editor, overlapping the toolbar) instead of staying inside the content
- * area the table actually lives in. Fixed by clamping against the editor's
- * own getBoundingClientRect() instead of the viewport.
+ * edges while it stays selected. An earlier fix clamped the button's
+ * position against the editor's own getBoundingClientRect() so it couldn't
+ * float outside the editor into the surrounding page chrome — but that kept
+ * the button visible, pinned to the editor's edge, even once the cell was
+ * fully scrolled out of view, which just moved the "floats over unrelated
+ * content" problem from the page chrome to the editor's own edge. Now the
+ * button hides entirely once its cell has no overlap left with the editor's
+ * visible area, and reappears once scrolling brings the cell back into view.
  */
-test('the table action-menu button stays inside the editor when a large table is scrolled internally', async ({ page }) => {
+test('the table action-menu button hides once its cell scrolls fully out of view, and reappears when scrolled back', async ({ page }) => {
   await page.goto('/');
   await page.locator('[contenteditable="true"]').first().waitFor();
 
@@ -70,8 +72,6 @@ test('the table action-menu button stays inside the editor when a large table is
   await page.getByRole('button', { name: 'Add', exact: true }).click();
 
   const editor = page.locator('[contenteditable="true"]').first();
-  const editorBox = await editor.boundingBox();
-  expect(editorBox).not.toBeNull();
 
   const firstCell = page.locator('table td, table th').first();
   await firstCell.click();
@@ -83,12 +83,10 @@ test('the table action-menu button stays inside the editor when a large table is
   // selected cell, without reselecting — the cursor stays in that cell.
   await editor.evaluate((el) => { el.scrollTop = el.scrollHeight; });
 
-  await expect(async () => {
-    const buttonBox = await button.boundingBox();
-    expect(buttonBox).not.toBeNull();
-    expect(buttonBox!.y).toBeGreaterThanOrEqual(editorBox!.y);
-    expect(buttonBox!.y + buttonBox!.height).toBeLessThanOrEqual(editorBox!.y + editorBox!.height);
-    expect(buttonBox!.x).toBeGreaterThanOrEqual(editorBox!.x);
-    expect(buttonBox!.x + buttonBox!.width).toBeLessThanOrEqual(editorBox!.x + editorBox!.width);
-  }).toPass({ timeout: 5000 });
+  await expect(button).toBeHidden({ timeout: 5000 });
+
+  // Scroll back to the top so the cell is visible again.
+  await editor.evaluate((el) => { el.scrollTop = 0; });
+
+  await expect(button).toBeVisible({ timeout: 5000 });
 });

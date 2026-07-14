@@ -232,15 +232,37 @@ export default function TableActionMenuPlugin({ disabled = false }: { disabled?:
     const BUTTON_SIZE = 28;
     const PAD = 8;
 
-    // Clamp to the editor's own visible (scroll-clipped) bounds, not just
-    // the browser viewport. The button is a position:fixed portal outside
-    // the editor's own overflow:auto container, so it isn't clipped the way
-    // the table itself is — with a large table, scrolling the editor's
-    // content (or the page) can carry the selected cell above/below/beside
-    // the editor's own edges while it stays "selected", and a viewport-only
-    // clamp then floats the button into the surrounding page chrome instead
-    // of keeping it pinned to the content area the table actually lives in.
     const editorRect = editor.getRootElement()?.getBoundingClientRect();
+
+    // Hide entirely once the selected cell has scrolled out of the editor's
+    // own visible (clipped) area and/or off the browser viewport. The button
+    // is a position:fixed portal outside the editor's own overflow:auto
+    // container, so it isn't clipped the way the table itself is — without
+    // this check, a cell that scrolls fully out of view would still show the
+    // button pinned to the editor's edge, floating disconnected over
+    // whatever content is actually visible there instead of the table it
+    // belongs to.
+    const clipRect = editorRect
+      ? {
+          top: Math.max(editorRect.top, 0),
+          left: Math.max(editorRect.left, 0),
+          right: Math.min(editorRect.right, window.innerWidth),
+          bottom: Math.min(editorRect.bottom, window.innerHeight),
+        }
+      : { top: 0, left: 0, right: window.innerWidth, bottom: window.innerHeight };
+
+    const isCellVisible =
+      anchorRect.bottom > clipRect.top &&
+      anchorRect.top < clipRect.bottom &&
+      anchorRect.right > clipRect.left &&
+      anchorRect.left < clipRect.right;
+
+    if (!isCellVisible) return undefined;
+
+    // Clamp to the editor's own visible (scroll-clipped) bounds, not just the
+    // browser viewport, for cells that are only partially scrolled out — so
+    // the button stays pinned to the content area the table actually lives
+    // in rather than floating into the surrounding page chrome.
     const minTop = editorRect ? editorRect.top + PAD : PAD;
     const maxTop = editorRect
       ? Math.max(minTop, editorRect.bottom - BUTTON_SIZE - PAD)

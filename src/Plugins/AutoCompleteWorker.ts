@@ -17,7 +17,7 @@ const REWARD_URL = 'https://ai.servicesuat.actingoffice.com/api/convomail/reward
 
 self.onmessage = async (event: MessageEvent<WorkerReq>) => {
   const data = event.data as any;
-
+ 
   // ── Reward call ─────────────────────────────────────────────────────────
   if (data.type === 'reward') {
     const { suggestionText, triggerText, token } = data;

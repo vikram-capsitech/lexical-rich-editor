@@ -2,6 +2,13 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.3.11] — 2026-07-14
+
+### Fixed
+- A read-only editor instance fed from shared state (e.g. a "full view" panel kept mounted alongside an editable instance) never picked up content/style changes made after its first mount — `CustomOnChangePlugin` imported the `value` prop exactly once per instance, gated by a ref that never reset. Read-only instances now keep syncing to `value` for their whole lifetime; editable instances keep the original one-shot import so a live typing cursor is never clobbered by an echoed `value` update.
+- The table cell action-menu dropdown stayed visible, pinned to the editor's edge, once its selected cell had scrolled fully out of view inside the editor's own scroll container — looking detached from the table it belonged to. It now hides once the cell has no overlap with the editor's visible area, and reappears once scrolling brings the cell back into view.
+- `OnChangePlugin` fired on every selection-only change (arrow-key navigation, extending a selection, clicking around) — not just actual edits — because `ignoreSelectionChange` was never set and defaults to `false`. Each firing re-serialized the entire document via `$generateHtmlFromNodes` plus two full `DOMParser` passes, then invoked the consumer's `onChange` (typically a state update triggering a re-render). That synchronous work running on every keystroke, including plain cursor movement, could make keyboard input feel unresponsive, especially with spellcheck/autocomplete enabled or on longer documents.
+
 ## [1.3.10] — 2026-07-07
 
 ### Fixed

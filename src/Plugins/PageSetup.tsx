@@ -4,7 +4,7 @@ import {
   MenuDivider,
   MenuGroup,
   MenuGroupHeader,
-  MenuItemRadio,
+  MenuItemRadio,  
   MenuList,
   MenuPopover,
   MenuTrigger,
@@ -88,7 +88,6 @@ export function PageSetupPlugin({ disabled, value, onChange }: PageSetupPluginPr
           </MenuGroup>
 
           <MenuDivider />
-
           <MenuGroup>
             <MenuGroupHeader>Margins</MenuGroupHeader>
             {MARGIN_OPTIONS.map((opt) => (
@@ -101,4 +100,4 @@ export function PageSetupPlugin({ disabled, value, onChange }: PageSetupPluginPr
       </MenuPopover>
     </Menu>
   );
-}
+} 
