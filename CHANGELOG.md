@@ -2,6 +2,11 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.3.14] — 2026-07-16
+
+### Fixed
+- Shift+Delete could silently do nothing instead of deleting the selected text. Chrome (and other browsers) map Shift+Delete to the OS-level "Cut" shortcut, which fires a native `cut` ClipboardEvent instead of an ordinary delete keystroke — Lexical's default cut handling awaits an async clipboard write before it deletes the selection, and in hosts where clipboard access is restricted or the native `cut` event doesn't reach Lexical's own listener (sandboxed iframes, some embedded/Electron contexts, stricter Permissions-Policy setups), that chain could silently never reach the delete step. Added `RobustCutPlugin`, which intercepts the Shift+Delete keydown directly and deletes the selection synchronously, independent of the native cut/clipboard event pipeline; clipboard population is now a best-effort, non-blocking step afterward instead of a prerequisite for deletion.
+
 ## [1.3.13] — 2026-07-14
 
 ### Fixed

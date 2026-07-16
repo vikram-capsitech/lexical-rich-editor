@@ -52,6 +52,7 @@ import ImagesPlugin from './Plugins/ImagePlugin';
 import InlineImagePlugin from './Plugins/InlineImage';
 import PageBreakPlugin from './Plugins/PageBreak';
 import RefApiPlugin from './Plugins/RefApiPlugin';
+import RobustCutPlugin from './Plugins/RobustCutPlugin';
 import SpellCheckPlugin from './Plugins/Spellcheckplugin';
 import TableActionMenuPlugin from './Plugins/TableActionMenuPlugin';
 import TableCellResizerPlugin from './Plugins/TableCellResizer';
@@ -746,6 +747,7 @@ export const ContentEditorComponent = forwardRef<ContentEditorRef, ContentEditor
               <TablePlugin hasCellMerge hasCellBackgroundColor />
 
               {!isReadOnly && <YoutubeDeletePlugin />}
+              {!isReadOnly && <RobustCutPlugin />}
 
               {!isReadOnly && floatingAnchorElem && <TableActionMenuPlugin />}
               {!isReadOnly && floatingAnchorElem && (
