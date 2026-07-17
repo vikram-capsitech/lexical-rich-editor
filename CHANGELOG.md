@@ -2,6 +2,17 @@
 
 All notable changes to `@tarviks/lexical-rich-editor` are documented here.
 
+## [1.3.14] — 2026-07-16
+
+### Fixed
+- Shift+Delete could silently do nothing instead of deleting the selected text. Chrome (and other browsers) map Shift+Delete to the OS-level "Cut" shortcut, which fires a native `cut` ClipboardEvent instead of an ordinary delete keystroke — Lexical's default cut handling awaits an async clipboard write before it deletes the selection, and in hosts where clipboard access is restricted or the native `cut` event doesn't reach Lexical's own listener (sandboxed iframes, some embedded/Electron contexts, stricter Permissions-Policy setups), that chain could silently never reach the delete step. Added `RobustCutPlugin`, which intercepts the Shift+Delete keydown directly and deletes the selection synchronously, independent of the native cut/clipboard event pipeline; clipboard population is now a best-effort, non-blocking step afterward instead of a prerequisite for deletion.
+
+## [1.3.13] — 2026-07-14
+
+### Fixed
+- A read-only editor instance fed from shared state (e.g. a "full view" panel kept mounted alongside an editable instance) never picked up content/style changes made after its first mount — `CustomOnChangePlugin` imported the `value` prop exactly once per instance, gated by a ref that never reset. Read-only instances now keep syncing to `value` for their whole lifetime; editable instances keep the original one-shot import so a live typing cursor is never clobbered by an echoed `value` update.
+- `OnChangePlugin` fired on every selection-only change (arrow-key navigation, extending a selection, clicking around) — not just actual edits — because `ignoreSelectionChange` was never set and defaults to `false`. Each firing re-serialized the entire document via `$generateHtmlFromNodes` plus two full `DOMParser` passes, then invoked the consumer's `onChange` (typically a state update triggering a re-render). That synchronous work running on every keystroke, including plain cursor movement, could make keyboard input feel unresponsive, especially with spellcheck/autocomplete enabled or on longer documents.
+
 ## [1.3.12] — 2026-07-07
 
 ### Fixed
